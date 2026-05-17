@@ -203,4 +203,11 @@ void Renderer::drawPerson(int index)
 
 	drawBitmap(outX, outY, mask, 16, 16, 0);
 	drawBitmap(outX, outY, sprite, 16, 16, 1);
+
+	if (index == engine.personPlayer1)
+	{
+		drawBitmap(outX + 5, outY - 8, selectionArrowSpriteMask, 8, 8, 0);
+		drawBitmap(outX + 5, outY - 8, selectionArrowSprite, 8, 8, 1);
+	}
 }
+

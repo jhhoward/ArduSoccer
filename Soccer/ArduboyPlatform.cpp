@@ -5,6 +5,7 @@ ArduboyPlatform Platform;
 
 void ArduboyPlatform::update()
 {
+	lastInputState = inputState;
 	inputState = 0;
 	  
 	if(arduboy.pressed(A_BUTTON))

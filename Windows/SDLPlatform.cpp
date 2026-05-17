@@ -146,6 +146,7 @@ KeyMap KeyMappings[] =
 
 void SDLPlatform::updateInputState()
 {
+	lastInputState = inputState;
 	inputState = 0;
 
 	const uint8_t* keyStates = SDL_GetKeyboardState(NULL);

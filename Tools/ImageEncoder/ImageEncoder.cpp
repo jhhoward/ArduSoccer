@@ -539,6 +539,8 @@ void EncodeBitmap(FILE* fs, const char* imagePath, const char* varName, bool out
 	if ((height & 7) != 0)
 	{
 		// Needs to be multiple of 8
+		printf("Error! %s needs to have a height multiple of 8!\n", imagePath);
+
 		return;
 	}
 
@@ -583,6 +585,10 @@ void EncodeBitmap(FILE* fs, const char* imagePath, const char* varName, bool out
 
 		fprintf(fs, "\n};\n");
 	}
+	else
+	{
+		printf("Error opening %s\n", imagePath);
+	}
 }
 
 #define TILE_SIZE 8
@@ -607,6 +613,7 @@ void EncodeBackground(FILE* fs, const char* imagePath)
 	if ((height & 15) != 0)
 	{
 		// Needs to be multiple of 16
+		printf("Error! %s needs to have a height multiple of 16!\n", imagePath);
 		return;
 	}
 
@@ -706,6 +713,10 @@ void EncodeBackground(FILE* fs, const char* imagePath)
 		}
 		fprintf(fs, "};\n\n");
 	}
+	else
+	{
+		printf("Error opening %s\n", imagePath);
+	}
 }
 
 void EncodeBitmapWithMask(FILE* fs, const char* inputPath, const char* varName, const char* maskName)
@@ -718,8 +729,9 @@ void EncodeBitmapWithMask(FILE* fs, const char* inputPath, const char* varName, 
 int main(int argc, char* argv[])
 {
 	FILE* fs = NULL;
+	const char* outputPath = "Soccer/Generated/Pitch.inc.h";
 
-	fopen_s(&fs, "Soccer/Generated/Pitch.inc.h", "w");
+	fopen_s(&fs, outputPath, "w");
 
 	if (fs)
 	{
@@ -734,7 +746,13 @@ int main(int argc, char* argv[])
 		EncodeBitmapWithMask(fs, "Assets/upperGoal.png", "upperGoalSprite", "upperGoalSpriteMask");
 		EncodeBitmapWithMask(fs, "Assets/lowerGoal2.png", "lowerGoalSprite", "lowerGoalSpriteMask");
 
+		EncodeBitmapWithMask(fs, "Assets/selectionArrow.png", "selectionArrowSprite", "selectionArrowSpriteMask");
+
 		fclose(fs);
+	}
+	else
+	{
+		printf("Error opening %s for write\n", outputPath);
 	}
 
 	return 0;

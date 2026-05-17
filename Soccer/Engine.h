@@ -21,6 +21,7 @@ enum
 struct Camera
 {
 	int x, y;
+	int offsetX, offsetY;
 };
 
 class Engine
@@ -29,6 +30,8 @@ public:
 	void init();
 	void update();
 	void draw();
+
+	void cycleSelectedPerson() { changingPlayer1 = true; }
 	
 	int16_t frameCount;
 	uint8_t gameState;
@@ -39,6 +42,7 @@ public:
 	Ball ball;
 
 	uint8_t personPlayer1;
+	bool changingPlayer1;
 };
 
 extern Engine engine;

@@ -21,7 +21,8 @@ public:
 	{
 		Standing,
 		Walking,
-		KickRecovery
+		Stunned,
+		SlideTackle
 	};
 
 	uint8_t index;
@@ -37,6 +38,14 @@ public:
 
 	void init(uint8_t index);
 	void update();
+	void stun(uint8_t frames, bool shouldFall = false);
+	void kickBall(int velocityX, int velocityY, int velocityZ);
+
+	bool isOnScreen();
+
+	static void getDirectionOffset(uint8_t direction, int8_t& dx, int8_t& dy);
+
+	
 
 	static int8_t ballDeltaX, ballDeltaY;
 };
