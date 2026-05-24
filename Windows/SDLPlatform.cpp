@@ -18,13 +18,84 @@ bool isAudioEnabled = true;
 bool isRecording = false;
 int currentRecordingFrame = 0;
 
+
+// Sound generation testing
+const uint8_t soundDither[] =
+{
+	0, 128, 191, 64
+};
+
+const uint16_t soundTest[] =
+{
+	440, 512,
+	100, 512,
+	440, 512,
+	TONES_END
+};
+
+#define PROCEDURAL_BUFFER_SIZE 20480
+uint16_t proceduralSoundBuffer[PROCEDURAL_BUFFER_SIZE];
+
+int generateProceduralSound(
+	uint16_t* buffer, 
+	size_t bufferLength,
+	uint16_t totalDuration,
+	uint16_t startFreq, uint16_t endFreq,
+	uint16_t noisiness, uint8_t startVol, uint8_t endVol) 
+{
+	int frameSize = 4;
+	int totalFrames = totalDuration / frameSize;
+
+	if (totalFrames * 2 >= bufferLength)
+	{
+		totalFrames = bufferLength / 2 - 1;
+	}
+
+	int index = 0;
+
+	for (uint16_t i = 0; i < totalFrames; i++)
+	{
+		float t = (float)i / (float)totalFrames;
+		int32_t currentFreq = startFreq + (int32_t)((endFreq - startFreq) * t);
+
+		if (noisiness > 0) 
+		{
+			currentFreq += (rand() % noisiness) - (noisiness / 2);
+			//currentFreq += random(-noisiness, noisiness + 1);
+		}
+
+		// Clamp frequency to Arduboy limits
+		if (currentFreq < 16) currentFreq = 16;
+		if (currentFreq > 32767) currentFreq = 32767;
+
+		uint8_t currentVol = startVol + (uint8_t)((endVol - startVol) * t);
+		uint16_t finalFreq = currentFreq;
+
+		if (currentVol < soundDither[i & 3])
+		{
+			finalFreq = 0;
+		}
+
+		buffer[index++] = finalFreq;
+		buffer[index++] = frameSize;
+	}
+
+	// Mandatory array terminator for ArduboyTones
+	buffer[index++] = TONES_END;
+
+	return index;
+}
+
+///
+
 void Play(const uint16_t* pattern)
 {
 	currentAudioPattern = pattern;
 	currentPatternBufferPos = 0;
 }
 
-void FillAudioBuffer(void* udata, uint8_t* stream, int len)
+/*
+void FillAudioBufferOld(void* udata, uint8_t* stream, int len)
 {
 	int feedPos = 0;
 
@@ -32,7 +103,7 @@ void FillAudioBuffer(void* udata, uint8_t* stream, int len)
 	static int noteSamplesLeft = 0;
 	static int frequency = 0;
 	static bool high = false;
-
+	
 	if (!isAudioEnabled)
 	{
 		while (feedPos < len)
@@ -91,6 +162,77 @@ void FillAudioBuffer(void* udata, uint8_t* stream, int len)
 			}
 		}
 
+	}
+}
+*/
+
+void FillAudioBuffer(void* udata, uint8_t* stream, int len)
+{
+	int feedPos = 0;
+
+	static int noteSamplesLeft = 0;
+	static int frequency = 0;
+	static double time = 0;
+
+	if (!isAudioEnabled)
+	{
+		while (feedPos < len)
+		{
+			stream[feedPos++] = 0;
+		}
+		return;
+	}
+
+	while (feedPos < len)
+	{
+		if (noteSamplesLeft == 0)
+		{
+			if (currentAudioPattern != nullptr)
+			{
+				frequency = currentAudioPattern[currentPatternBufferPos];
+				uint16_t duration = currentAudioPattern[currentPatternBufferPos + 1];
+
+				noteSamplesLeft = (audioSampleRate * duration) / 1024;
+				//time = 0;
+
+				currentPatternBufferPos += 2;
+				if (currentAudioPattern[currentPatternBufferPos] == TONES_END)
+				{
+					currentAudioPattern = nullptr;
+				}
+			}
+			else
+			{
+				while (feedPos < len)
+				{
+					stream[feedPos++] = 0;
+				}
+			}
+		}
+		else
+		{
+			if (frequency == 0)
+			{
+				while (feedPos < len && noteSamplesLeft > 0)
+				{
+					stream[feedPos++] = 0;
+					noteSamplesLeft--;
+				}
+			}
+			else
+			{
+				while (feedPos < len && noteSamplesLeft > 0)
+				{
+					time += 1.0 / audioSampleRate;
+					bool high = sin(2 * 3.1415 * time * frequency) > 0;
+					int volume = 32;
+					stream[feedPos++] = high ? volume : 0;
+					//stream[feedPos++] = (uint8_t)(32 + 32 * sin(2 * 3.1415 * time * frequency));
+
+					noteSamplesLeft--;
+				}
+			}
+		}
 	}
 }
 
@@ -191,6 +333,63 @@ void SDLPlatform::run()
 						case SDLK_ESCAPE:
 							m_isRunning = false;
 							break;
+
+						case SDLK_0:		// Kick
+							currentAudioPattern = nullptr;
+							generateProceduralSound(proceduralSoundBuffer, PROCEDURAL_BUFFER_SIZE, 
+								160, 180, 30, 0, 255, 128);
+							//generateProceduralSound(proceduralSoundBuffer, 20480, 1024, 440, 100, 0, 255, 128);
+							Play(proceduralSoundBuffer);
+							break;
+
+						case SDLK_9:	 // Crowd
+							currentAudioPattern = nullptr;
+							generateProceduralSound(proceduralSoundBuffer, PROCEDURAL_BUFFER_SIZE,
+								600, 450, 200, 30, 255, 0);
+							//generateProceduralSound(proceduralSoundBuffer, 2048, 1024, 600, 500, 250, 255, 0);
+							Play(proceduralSoundBuffer);
+							break;
+
+						case SDLK_8:		// Whistle
+							currentAudioPattern = nullptr;
+							generateProceduralSound(proceduralSoundBuffer, PROCEDURAL_BUFFER_SIZE,
+													400, 2500, 2550, 150, 255, 255);
+							//generateProceduralSound(proceduralSoundBuffer, 2048, 1024, 600, 500, 250, 255, 0);
+							Play(proceduralSoundBuffer);
+							break;
+
+						case SDLK_7:		// Crowd
+							currentAudioPattern = nullptr;
+							{
+								int size = generateProceduralSound(proceduralSoundBuffer, PROCEDURAL_BUFFER_SIZE,
+									500, 200, 450, 180, 0, 255) - 1;
+								size += generateProceduralSound(proceduralSoundBuffer + size, PROCEDURAL_BUFFER_SIZE,
+									2000, 450, 450, 180, 255, 255) - 1;
+								size += generateProceduralSound(proceduralSoundBuffer + size, PROCEDURAL_BUFFER_SIZE,
+									2000, 450, 450, 180, 255, 0);
+							}
+							Play(proceduralSoundBuffer);
+							break;
+
+						case SDLK_6:		// Ball land
+							currentAudioPattern = nullptr;
+							generateProceduralSound(proceduralSoundBuffer, PROCEDURAL_BUFFER_SIZE,
+								40, 180, 30, 0, 255, 128);
+							//generateProceduralSound(proceduralSoundBuffer, 20480, 1024, 440, 100, 0, 255, 128);
+							Play(proceduralSoundBuffer);
+							break;
+
+						case SDLK_5:		// Hit post
+							currentAudioPattern = nullptr;
+							generateProceduralSound(proceduralSoundBuffer, PROCEDURAL_BUFFER_SIZE,
+								150, 300, 300, 10, 255, 128);
+							//generateProceduralSound(proceduralSoundBuffer, 20480, 1024, 440, 100, 0, 255, 128);
+							Play(proceduralSoundBuffer);
+							break;
+
+						case SDLK_1:
+							Play(soundTest);
+							break;
 					}
 				break;
 			}
@@ -263,7 +462,7 @@ uint8_t paletteColours[] =
 #endif
 };
 
-void SDLPlatform::drawPixel(uint8_t x, uint8_t y, uint8_t colour)
+void SDLPlatform::drawPixel(int x, int y, uint8_t colour)
 {
 	if (x >= DISPLAYWIDTH || y >= DISPLAYHEIGHT)
 	{
@@ -301,6 +500,17 @@ void SDLPlatform::drawBitmap(int16_t x, int16_t y, const uint8_t* bitmap, uint8_
 					drawPixel(x + i, y + j + n, color);
 				}
 			}
+		}
+	}
+}
+
+void SDLPlatform::fillRect(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t colour)
+{
+	for (int i = 0; i < w; i++)
+	{
+		for (int j = 0; j < h; j++)
+		{
+			drawPixel(x + i, y + j, colour);
 		}
 	}
 }

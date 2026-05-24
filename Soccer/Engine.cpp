@@ -6,14 +6,10 @@ void Engine::init()
 {
 	gameState = GameState_Playing;
 
-	for (uint8_t n = 0; n < NUM_PEOPLE; n++)
-	{
-		people[n].init(n);
-	}
-
 	personPlayer1 = 0;
 
-	ball.setPosition(128, 50, 30);
+	match.reset();
+
 }
 
 
@@ -81,6 +77,10 @@ void Engine::update()
 				}
 				personPlayer1 = closest;
 			}
+
+			match.update();
+
+			updateCamera();
 		}
 		break;
 	case GameState_Menu:
@@ -89,6 +89,11 @@ void Engine::update()
 		break;
 	}
 
+	frameCount++;
+}
+
+void Engine::updateCamera()
+{
 	int targetCameraX, targetCameraY;
 
 	targetCameraX = ball.x;
@@ -96,11 +101,8 @@ void Engine::update()
 
 	int targetCameraOffsetX = 0, targetCameraOffsetY = 0;
 
-	if (ball.owner == NO_BALL_OWNER)
+	if (!ball.owner)
 	{
-		//targetCameraX += ball.velocityX >> 2;
-		//targetCameraY += ball.velocityY >> 2;
-
 		targetCameraOffsetX = ball.velocityX >> 2;
 		targetCameraOffsetY = ball.velocityY >> 2;
 
@@ -130,13 +132,12 @@ void Engine::update()
 			{
 				targetCameraOffsetY = maxY;
 			}
-
 		}
 	}
 	else
 	{
 		int8_t deltaX, deltaY;
-		Person::getDirectionOffset(people[ball.owner].direction, deltaX, deltaY);
+		Person::getDirectionOffset(ball.owner->direction, deltaX, deltaY);
 		targetCameraOffsetX = deltaX * 5;
 		targetCameraOffsetY = deltaY * 12;
 	}
@@ -185,7 +186,6 @@ void Engine::update()
 	if (camera.y > BACKGROUND_HEIGHT - DISPLAYHEIGHT)
 		camera.y = BACKGROUND_HEIGHT - DISPLAYHEIGHT;
 
-	frameCount++;
 }
 
 void Engine::draw()

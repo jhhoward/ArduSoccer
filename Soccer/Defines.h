@@ -15,6 +15,8 @@
 
 #if defined(EMULATE_ARDUBOY)
 // Arduboy
+//#define DISPLAYWIDTH 256
+//#define DISPLAYHEIGHT 320
 #define DISPLAYWIDTH 128
 #define DISPLAYHEIGHT 64
 #endif
@@ -92,7 +94,8 @@ using uint24_t = __uint24;
 #define KICK_RECOVERY_FRAMES 6
 #define TACKLE_RECOVERY_FRAMES 15
 #define SLIDE_TACKLE_RECOVERY_FRAMES 30
-#define SLIDE_TACKLE_FRAMES 20
+#define SLIDE_TACKLE_FRAMES 25
+#define PERSON_HEIGHT 12
 
 #define BACKGROUND_WIDTH 256
 #define BACKGROUND_HEIGHT 320
@@ -101,5 +104,38 @@ using uint24_t = __uint24;
 
 #define GET_BALL_DISTANCE 10
 #define TACKLE_DISTANCE 6
+
+#define CENTER_MARK_X 128
+#define CENTER_MARK_Y 160
+
+// 'Level geometry' for collision
+#define LEFT_POST_X1 100
+#define LEFT_POST_X2 108
+
+#define RIGHT_POST_X1 147
+#define RIGHT_POST_X2 155
+
+#define TOP_GOAL_POST_Y1 31
+#define TOP_GOAL_POST_Y2 37
+
+#define BOTTOM_GOAL_POST_Y1 282
+#define BOTTOM_GOAL_POST_Y2 289
+
+#define GOAL_BAR_Z1 21
+#define GOAL_BAR_Z2 27
+
+#define GOAL_NET_X1 100
+#define GOAL_NET_X2 155
+
+#define TOP_GOAL_NET_Y1 27
+#define TOP_GOAL_NET_Y2 33
+
+#define BOTTOM_GOAL_NET_Y1 287
+#define BOTTOM_GOAL_NET_Y2 294
+
+
+#define PERSON_HALF_WIDTH 5
+
+#define GOALIE_DIVE_FRAMES 21
 
 #endif

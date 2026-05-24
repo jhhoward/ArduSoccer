@@ -69,13 +69,71 @@ void Renderer::draw()
 			break;
 		}
 	}
+
+	if (Platform.readInputDown() & Input_Btn_A)
+	{
+		//showLargeMessage(PSTR("GOAL!"));
+	}
+
+	if (largeMessageCounter > 0)
+	{
+		int largeMessageHeight = 18;
+		int transitionSize = largeMessageHeight / 2;
+		bool showText = false;
+
+		if (largeMessageCounter < transitionSize)
+		{
+			fillRect(0, DISPLAYHEIGHT / 2 - largeMessageCounter, DISPLAYWIDTH, largeMessageCounter * 2, 0);
+			showText = largeMessageCounter >= transitionSize - 2;
+		}
+		else if (largeMessageCounter > 60 - transitionSize)
+		{
+			int y = (60 - largeMessageCounter);
+			fillRect(0, DISPLAYHEIGHT / 2 - y, DISPLAYWIDTH, y * 2, 0);
+			showText = y >= transitionSize - 2;
+		}
+		else
+		{
+			fillRect(0, DISPLAYHEIGHT / 2 - largeMessageHeight / 2, DISPLAYWIDTH, largeMessageHeight, 0);
+			showText = true;
+		}
+
+		if (showText)
+		{
+			drawText(largeMessage, largeMessageX, DISPLAYHEIGHT / 2 - 7, 1);
+		}
+
+		largeMessageCounter--;
+	}
+}
+
+void Renderer::showLargeMessage(const char* message)
+{
+	int messageLength = 0;
+
+	const char* ptr = message;
+	while (1)
+	{
+		char c = pgm_read_byte(ptr);
+		ptr++;
+		if (!c)
+			break;
+		if (c == ' ')
+			messageLength += 6;
+		else
+			messageLength += 15;
+	}
+
+	largeMessageX = HALF_DISPLAYWIDTH - messageLength / 2;
+	largeMessage = message;
+	largeMessageCounter = 60;
 }
 
 void Renderer::drawLowerGoal()
 {
 	int goalWidth = 52;
 	int goalHeight = 32;
-	int outX = 99 - engine.camera.x;
+	int outX = 102 - engine.camera.x;
 	int outY = 263 - engine.camera.y;
 
 	if (outX >= DISPLAYWIDTH)
@@ -95,7 +153,7 @@ void Renderer::drawUpperGoal()
 {
 	int goalWidth = 52;
 	int goalHeight = 32;
-	int outX = 99 - engine.camera.x;
+	int outX = 102 - engine.camera.x;
 	int outY = 2 - engine.camera.y;
 
 	if (outX >= DISPLAYWIDTH)
@@ -168,7 +226,7 @@ void Renderer::drawPerson(int index)
 {
 	Person& person = engine.people[index];
 	int outX = person.x - engine.camera.x - 8;
-	int outY = person.y - engine.camera.y - 14;
+	int outY = person.y - engine.camera.y - 14 - person.z;
 
 	if (outX >= DISPLAYWIDTH)
 		return;
@@ -208,6 +266,30 @@ void Renderer::drawPerson(int index)
 	{
 		drawBitmap(outX + 5, outY - 8, selectionArrowSpriteMask, 8, 8, 0);
 		drawBitmap(outX + 5, outY - 8, selectionArrowSprite, 8, 8, 1);
+	}
+}
+
+void Renderer::drawText(const char* text, int16_t x, int16_t y, uint8_t colour)
+{
+	while (1)
+	{
+		char c = pgm_read_byte(text);
+		if (!c)
+			break;
+		text++;
+
+		int index = c - ' ';
+
+		if (index == 0)
+		{
+			x += 6;
+		}
+		else
+		{
+			const uint8_t* data = largeFontData + (32 * index);
+			drawBitmap(x, y, data, 16, 16, colour);
+			x += 15;
+		}
 	}
 }
 

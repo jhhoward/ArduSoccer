@@ -11,6 +11,7 @@
 #include "Renderer.h"
 #include "Person.h"
 #include "Ball.h"
+#include "Match.h"
 
 enum
 {
@@ -40,9 +41,13 @@ public:
 	Camera camera;
 	Person people[NUM_PEOPLE];
 	Ball ball;
+	Match match;
 
 	uint8_t personPlayer1;
 	bool changingPlayer1;
+
+private:
+	void updateCamera();
 };
 
 extern Engine engine;

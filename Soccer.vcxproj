@@ -14,6 +14,7 @@
     <ClInclude Include="Soccer\Ball.h" />
     <ClInclude Include="Soccer\Defines.h" />
     <ClInclude Include="Soccer\Engine.h" />
+    <ClInclude Include="Soccer\Match.h" />
     <ClInclude Include="Soccer\Person.h" />
     <ClInclude Include="Soccer\Platform.h" />
     <ClInclude Include="Soccer\Renderer.h" />
@@ -21,6 +22,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Soccer\Ball.cpp" />
+    <ClCompile Include="Soccer\Match.cpp" />
     <ClCompile Include="Soccer\Person.cpp" />
     <ClCompile Include="Soccer\Renderer.cpp" />
     <ClCompile Include="Windows\lodepng.cpp" />

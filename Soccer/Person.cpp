@@ -3,19 +3,19 @@
 
 const int16_t startingPositions[] PROGMEM =
 {
-	128, 40,
-	64, 64,
-	192, 64,
-	64, 96,
-	192, 96,
+	128, 35,
+	128, 86,
+	64, 112,
+	148, 151,
+	128, 155,
 
-	128, 200,
-	64, 180,
-	192, 180,
-	64, 140,
-	192, 140,
+	128, 282,
+	128, 232,
+	64, 209,
+	192, 209,
+	128, 189,
 
-	128, 128
+	75, 148
 };
 
 enum FrameNames
@@ -36,7 +36,15 @@ enum FrameNames
 	EAST_TACKLE,
 	SOUTH_TACKLE,
 	NORTH_TACKLE,
-	WEST_TACKLE
+	WEST_TACKLE,
+	SOUTH_DIVE_RIGHT1,
+	SOUTH_DIVE_RIGHT2,
+	SOUTH_DIVE_LEFT1,
+	SOUTH_DIVE_LEFT2,
+	NORTH_DIVE_RIGHT1,
+	NORTH_DIVE_RIGHT2,
+	NORTH_DIVE_LEFT1,
+	NORTH_DIVE_LEFT2
 };
 
 const uint8_t walkAnimations[] PROGMEM =
@@ -127,6 +135,31 @@ const int8_t directionToY[] PROGMEM =
 	-1,
 };
 
+const uint8_t goalieDiveZ[] PROGMEM =
+{
+	0,
+	2,
+	4,
+	6,
+	7,
+	8,
+	8,
+	8,
+	7,
+	6,
+	4,
+	2,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0
+};
+
 int8_t Person::ballDeltaX;
 int8_t Person::ballDeltaY;
 
@@ -160,7 +193,7 @@ void Person::init(uint8_t startIndex)
 void Person::stun(uint8_t frames, bool shouldFall)
 {
 	animationFrame = frames;
-	state = Person::Stunned;
+	state = shouldFall ? Person::Fallen : Person::Stunned;
 
 	if (shouldFall)
 	{
@@ -178,7 +211,7 @@ bool Person::isOnScreen()
 
 void Person::kickBall(int velocityX, int velocityY, int velocityZ)
 {
-	engine.ball.owner = NO_BALL_OWNER;
+	engine.ball.owner = NULL;
 	engine.ball.velocityX = velocityX;
 	engine.ball.velocityY = velocityY;
 	engine.ball.velocityZ = velocityZ;
@@ -190,11 +223,14 @@ void Person::kickBall(int velocityX, int velocityY, int velocityZ)
 
 void Person::update()
 {
-	if (state == Person::Stunned)
+	if (state == Person::Stunned || state == Person::Fallen)
 	{
 		if (animationFrame == 0)
 		{
-			state = Person::Standing;
+			if (!isColliding())
+			{
+				state = Person::Standing;
+			}
 		}
 		else animationFrame--;
 		return;
@@ -210,7 +246,7 @@ void Person::update()
 		{
 			input = Platform.readInput();
 
-			if (engine.ball.owner != index)
+			if (engine.ball.owner != this)
 			{
 				bool swapBecauseOffScreen = false;
 
@@ -243,7 +279,7 @@ void Person::update()
 			state = Person::Walking;
 
 			// Slow turn if dribbling the ball
-			if (engine.ball.owner == index)
+			if (engine.ball.owner == this)
 			{
 				int directionDelta = inputDirection - direction;
 				if (directionDelta > 4 || directionDelta < -4)
@@ -282,7 +318,14 @@ void Person::update()
 
 		if (input & Input_Btn_A)
 		{
-			if (engine.ball.owner == index)
+			if (1)
+			{
+				state = Person::DiveLeft;
+				//direction = South;
+				animationFrame = 0;
+				return;
+			}
+			if (engine.ball.owner == this)
 			{
 				// Pass
 				int8_t deltaX = ((int8_t)pgm_read_byte(&directionToX[direction]));
@@ -294,7 +337,7 @@ void Person::update()
 		}
 		if (input & Input_Btn_B)
 		{
-			if (engine.ball.owner == index)
+			if (engine.ball.owner == this)
 			{
 				// Shoot
 				int8_t deltaX = ((int8_t)pgm_read_byte(&directionToX[direction]));
@@ -310,7 +353,6 @@ void Person::update()
 				state = Person::SlideTackle;
 				displayFrame = pgm_read_byte(&directionToSlideTackleFrame[direction]);
 			}
-			//engine.ball.owner = index;
 		}
 	}
 
@@ -320,21 +362,68 @@ void Person::update()
 		animationFrame = 0;
 		break;
 	case Person::Walking:
-		if ((engine.frameCount & 3) == 0)
-		{
-			animationFrame++;
-			if (animationFrame == 4)
-			{
-				animationFrame = 0;
-			}
-		}
-
 		//if ((engine.frameCount & 1) == 0)
 		{
 			int8_t deltaX, deltaY;
 			getDirectionOffset(direction, deltaX, deltaY);
-			x += deltaX;
-			y += deltaY;
+
+			if (tryMove(deltaX, deltaY))
+			{
+				if ((engine.frameCount & 3) == 0)
+				{
+					animationFrame++;
+					if (animationFrame == 4)
+					{
+						animationFrame = 0;
+					}
+				}
+			}
+		}
+		break;
+	case Person::DiveLeft:
+		{
+			if (animationFrame < GOALIE_DIVE_FRAMES / 2)
+			{
+				displayFrame = direction == South ? SOUTH_DIVE_LEFT1 : NORTH_DIVE_LEFT1;
+				tryMove(-2, 0);
+			}
+			else if(animationFrame < GOALIE_DIVE_FRAMES)
+			{
+				displayFrame = direction == South ? SOUTH_DIVE_LEFT2 : NORTH_DIVE_LEFT2;
+				tryMove(-1, 0);
+			}
+			else
+			{
+				stun(0);
+				z = 0;
+				return;
+			}
+			
+			z = pgm_read_byte(&goalieDiveZ[animationFrame]);
+			animationFrame++;
+		}
+		break;
+	case Person::DiveRight:
+		{
+			if (animationFrame < GOALIE_DIVE_FRAMES / 2)
+			{
+				displayFrame = direction == South ? SOUTH_DIVE_RIGHT1 : NORTH_DIVE_RIGHT1;
+				tryMove(2, 0);
+			}
+			else if(animationFrame < GOALIE_DIVE_FRAMES)
+			{
+				displayFrame = direction == South ? SOUTH_DIVE_RIGHT2 : NORTH_DIVE_RIGHT2;
+				tryMove(1, 0);
+			}
+			else
+			{
+				stun(0);
+				z = 0;
+				return;
+			}
+			
+			z = pgm_read_byte(&goalieDiveZ[animationFrame]);
+			animationFrame++;
 		}
 		break;
 	case Person::SlideTackle:
@@ -343,22 +432,20 @@ void Person::update()
 			getDirectionOffset(direction, deltaX, deltaY);
 			if (animationFrame < SLIDE_TACKLE_FRAMES / 3)
 			{
-				x += deltaX * 2;
-				y += deltaY * 2;
+				tryMove(deltaX, deltaY);
 			}
-			else if (animationFrame < 2 * SLIDE_TACKLE_FRAMES / 3)
+			if (animationFrame < 2 * SLIDE_TACKLE_FRAMES / 3)
 			{
-				x += deltaX;
-				y += deltaY;
+				tryMove(deltaX, deltaY);
 			}
 
 			// Check if we are fouling anyone
-			if (engine.ball.owner != index)
+			if (engine.ball.owner != this)
 			{
 				for (int n = 0; n < PLAYERS_PER_TEAM * 2; n++)
 				{
 					Person& other = engine.people[n];
-					if (other.team != team && engine.ball.owner != other.index && other.state != Person::Stunned)
+					if (other.team != team && engine.ball.owner != &other && other.state != Person::Stunned && other.state != Person::Fallen)
 					{
 						int diffX = other.x - x;
 						int diffY = other.y - y;
@@ -389,56 +476,84 @@ void Person::update()
 	}
 
 	// Check for tackling / gaining control of the ball
-	if (team != 2)
+	if (team != 2 && engine.ball.z < PERSON_HEIGHT)
 	{
 		int diffX = engine.ball.x - x;
 		int diffY = engine.ball.y - y;
 
-		if (engine.ball.owner == NO_BALL_OWNER && diffX >= -GET_BALL_DISTANCE && diffX <= GET_BALL_DISTANCE && diffY >= -GET_BALL_DISTANCE && diffY <= GET_BALL_DISTANCE)
+		if (engine.ball.owner == NULL && diffX >= -GET_BALL_DISTANCE && diffX <= GET_BALL_DISTANCE && diffY >= -GET_BALL_DISTANCE && diffY <= GET_BALL_DISTANCE)
 		{
-			engine.ball.owner = index;
+			engine.ball.owner = this;
 			ballDeltaX = diffX;
 			ballDeltaY = diffY;
 		}
-		else if (engine.people[engine.ball.owner].team != team && diffX >= -TACKLE_DISTANCE && diffX <= TACKLE_DISTANCE && diffY >= -TACKLE_DISTANCE && diffY <= TACKLE_DISTANCE)
+		else if (engine.ball.owner && engine.ball.owner->team != team && diffX >= -TACKLE_DISTANCE && diffX <= TACKLE_DISTANCE && diffY >= -TACKLE_DISTANCE && diffY <= TACKLE_DISTANCE)
 		{
 			if (state == Person::SlideTackle)
 			{
-				engine.people[engine.ball.owner].stun(SLIDE_TACKLE_RECOVERY_FRAMES, true);
+				engine.ball.owner->stun(SLIDE_TACKLE_RECOVERY_FRAMES, true);
   			}
 			else
 			{
-				engine.people[engine.ball.owner].stun(TACKLE_RECOVERY_FRAMES);
+				engine.ball.owner->stun(TACKLE_RECOVERY_FRAMES);
 			}
-			engine.ball.owner = index;
+			engine.ball.owner = this;
 			ballDeltaX = diffX;
 			ballDeltaY = diffY;
 		}
 	}
 
-	// Dribbling the ball
-	if (engine.ball.owner == index)
+	if (engine.ball.owner == this)
 	{
 		int8_t deltaX, deltaY;
 		getDirectionOffset(direction, deltaX, deltaY);
 
-		deltaX *= 6;
-		deltaY *= 4;
-
-		if (ballDeltaX < deltaX)
-			ballDeltaX++;
-		else if (ballDeltaX > deltaX)
-			ballDeltaX--;
-		if (ballDeltaY < deltaY)
-			ballDeltaY++;
-		else if (ballDeltaY > deltaY)
-			ballDeltaY--;
-
-		engine.ball.setPosition(x + ballDeltaX, y + ballDeltaY, engine.ball.z);
-
-		if (team == 0)
+		if (state == Person::DiveRight)
 		{
-			engine.personPlayer1 = index;
+			// Saving during a dive
+			engine.ball.setPosition(x + 2, y + deltaY, z + 3);
+		}
+		else if (state == Person::DiveLeft)
+		{
+			// Saving during a dive
+			engine.ball.setPosition(x - 2, y + deltaY, z + 3);
+		}
+		else
+		{
+			// Dribbling the ball
+			int ballZ = engine.ball.z;
+
+			if (0)
+			{
+				// Goalie Holding ball in hands
+				ballZ = z + 4;
+				deltaX *= 5;
+				deltaY *= 2;
+			}
+			else
+			{
+				// Dribbling on floor
+				deltaX *= 6;
+				deltaY *= 4;
+			}
+
+			if (ballDeltaX < deltaX)
+				ballDeltaX++;
+			else if (ballDeltaX > deltaX)
+				ballDeltaX--;
+			if (ballDeltaY < deltaY)
+				ballDeltaY++;
+			else if (ballDeltaY > deltaY)
+				ballDeltaY--;
+
+			if (team == 0)
+			{
+				engine.personPlayer1 = index;
+			}
+
+
+
+			engine.ball.setPosition(x + ballDeltaX, y + ballDeltaY, ballZ);
 		}
 	}
 }
@@ -447,4 +562,83 @@ void Person::getDirectionOffset(uint8_t direction, int8_t& dx, int8_t& dy)
 {
 	dx = ((int8_t)pgm_read_byte(&directionToX[direction]));
 	dy = ((int8_t)pgm_read_byte(&directionToY[direction]));
+}
+
+bool Person::tryMove(int deltaX, int deltaY)
+{
+	bool moved = false;
+
+	if (deltaX != 0)
+	{
+		x += deltaX;
+		if (isColliding())
+		{
+			x -= deltaX;
+		}
+		else moved = true;
+	}
+	if (deltaY != 0)
+	{
+		y += deltaY;
+		if (isColliding())
+		{
+			y -= deltaY;
+		}
+		else moved = true;
+	}
+
+	return moved;
+}
+
+bool Person::isColliding()
+{
+	// Left post
+	if (x >= LEFT_POST_X1 && x <= LEFT_POST_X2)
+	{
+		// Top goal
+		if (y >= TOP_GOAL_POST_Y1 && y <= TOP_GOAL_POST_Y2)
+		{
+			return true;
+		}
+		// Bottom goal
+		if (y >= BOTTOM_GOAL_POST_Y1 && y <= BOTTOM_GOAL_POST_Y2)
+		{
+			return true;
+		}
+	}
+
+	// Right post
+	if (x >= RIGHT_POST_X1 && x <= RIGHT_POST_X2)
+	{
+		// Top goal
+		if (y >= TOP_GOAL_POST_Y1 && y <= TOP_GOAL_POST_Y2)
+		{
+			return true;
+		}
+		// Bottom goal
+		if (y >= BOTTOM_GOAL_POST_Y1 && y <= BOTTOM_GOAL_POST_Y2)
+		{
+			return true;
+		}
+	}
+
+	if (x >= GOAL_NET_X1 && x <= GOAL_NET_X2 && y >= TOP_GOAL_NET_Y1 && y <= TOP_GOAL_NET_Y2)
+		return true;
+
+	if (x >= GOAL_NET_X1 && x <= GOAL_NET_X2 && y >= BOTTOM_GOAL_NET_Y1 && y <= BOTTOM_GOAL_NET_Y2)
+		return true;
+
+	for (int n = 0; n < NUM_PEOPLE; n++)
+	{
+		Person& other = engine.people[n];
+		if (&other != this && other.state != Person::Fallen)
+		{
+			if (y >= other.y - 1 && y <= other.y + 1 && x >= other.x - PERSON_HALF_WIDTH && x <= other.x + PERSON_HALF_WIDTH)
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
 }

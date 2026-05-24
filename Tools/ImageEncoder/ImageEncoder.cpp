@@ -725,6 +725,67 @@ void EncodeBitmapWithMask(FILE* fs, const char* inputPath, const char* varName, 
 	EncodeBitmap(fs, inputPath, maskName, true);
 }
 
+void EncodeBitmapFont(FILE* fs, const char* imagePath, const char* varName, int charWidth, int charHeight)
+{
+	vector<uint8_t> image;
+	unsigned width, height;
+	unsigned error = lodepng::decode(image, width, height, imagePath);
+	vector<Tile> tiles;
+	vector<int> tileMap;
+
+	if ((height & 7) != 0)
+	{
+		// Needs to be multiple of 8
+		printf("Error! %s needs to have a height multiple of 8!\n", imagePath);
+		return;
+	}
+
+	if (!error)
+	{
+		int charsX = width / charWidth;
+		int charsY = height / charHeight;
+
+		fprintf(fs, "const uint8_t %s[] PROGMEM = {\n\t", varName);
+
+		for (int cy = 0; cy < charsY; cy++)
+		{
+			for (int cx = 0; cx < charsX; cx++)
+			{
+				for (int j = 0; j < charHeight; j += 8)
+				{
+					for (int i = 0; i < charWidth; i++)
+					{
+						int values = 0;
+
+						for (int n = 0; n < 8; n++)
+						{
+							int index = ((cy * charHeight + j + n) * width + cx * charWidth + i) * 4;
+
+							if (image[index] > 128)
+							{
+								values |= (1 << n);
+							}
+						}
+
+						fprintf(fs, "0x%x", values);
+
+						if (i != charWidth - 1 || j != charHeight - 8 || cx != charsX - 1 || cy != charsY - 1)
+						{
+							fprintf(fs, ",");
+						}
+					}
+				}
+			}
+		}
+
+		fprintf(fs, "\n};\n\n");
+	}
+	else
+	{
+		printf("Error opening %s\n", imagePath);
+	}
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -747,6 +808,8 @@ int main(int argc, char* argv[])
 		EncodeBitmapWithMask(fs, "Assets/lowerGoal2.png", "lowerGoalSprite", "lowerGoalSpriteMask");
 
 		EncodeBitmapWithMask(fs, "Assets/selectionArrow.png", "selectionArrowSprite", "selectionArrowSpriteMask");
+
+		EncodeBitmapFont(fs, "Assets/largeFont.png", "largeFontData", 16, 16);
 
 		fclose(fs);
 	}

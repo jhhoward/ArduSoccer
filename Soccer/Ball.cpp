@@ -1,12 +1,59 @@
 #include "Ball.h"
 
+#define ITOFIX(x) ((x) << FIXED_SHIFT)
+
 void Ball::update()
 {
 	// If nobody is controlling the ball, let physics control it
-	if (owner == NO_BALL_OWNER)
+	if (!owner)
 	{
-		fixedX += velocityX;
+		bool wasInsideTopNet = isInsideTopNet();
+		bool wasInsideBottomNet = isInsideBottomNet();
+
+		fixedZ += velocityZ;
+		if (wasInsideTopNet != isInsideTopNet() || wasInsideBottomNet != isInsideBottomNet())
+		{
+			fixedZ -= velocityZ;
+			velocityZ = 0;
+		}
+
 		fixedY += velocityY;
+		if (isColliding())
+		{
+			fixedY -= velocityY;
+			velocityY = -velocityY / 2;
+		}
+		if (wasInsideTopNet != isInsideTopNet())
+		{
+			if ((!wasInsideTopNet && velocityY > 0) || (wasInsideTopNet && velocityY < 0))
+			{
+				fixedY -= velocityY;
+				velocityY = 0;
+				wasInsideTopNet = !wasInsideTopNet;
+			}
+		}
+		if (wasInsideBottomNet != isInsideBottomNet())
+		{
+			if ((!wasInsideBottomNet && velocityY < 0) || (wasInsideBottomNet && velocityY > 0))
+			{
+				fixedY -= velocityY;
+				velocityY = 0;
+				wasInsideBottomNet = !wasInsideBottomNet;
+			}
+		}
+
+		fixedX += velocityX;
+		if (isColliding())
+		{
+			fixedX -= velocityX;
+			velocityX = -velocityX / 2;
+		}
+		if (wasInsideTopNet != isInsideTopNet() || wasInsideBottomNet != isInsideBottomNet())
+		{
+			fixedX -= velocityX;
+			velocityX = 0;
+		}
+
 		x = fixedX >> FIXED_SHIFT;
 		y = fixedY >> FIXED_SHIFT;
 
@@ -27,12 +74,15 @@ void Ball::update()
 				velocityY = 0;
 		}
 	}
-
-	// Apply Z physics
-	fixedZ += velocityZ;
+	else
+	{
+		// Still apply Z physics if has a ball owner
+		fixedZ += velocityZ;
+	}
 
 	if (fixedZ < 0)
 	{
+		// Bounce off the ground
 		fixedZ = 0;
 		if (velocityZ < -(2 << FIXED_SHIFT))
 		{
@@ -82,13 +132,97 @@ void Ball::update()
 
 }
 
-void Ball::setPosition(int newX, int newY, int newZ)
+bool Ball::setPosition(int newX, int newY, int newZ)
 {
-	x = newX;
-	y = newY;
-	z = newZ;
+	int16_t oldFixedX = fixedX;
+	int16_t oldFixedY = fixedY;
+	int16_t oldFixedZ = fixedZ;
 
-	fixedX = x << FIXED_SHIFT;
-	fixedY = y << FIXED_SHIFT;
-	fixedZ = z << FIXED_SHIFT;
+	fixedX = newX << FIXED_SHIFT;
+	fixedY = newY << FIXED_SHIFT;
+	fixedZ = newZ << FIXED_SHIFT;
+
+	if (isColliding())
+	{
+		fixedX = oldFixedX;
+		fixedY = oldFixedY;
+		fixedZ = oldFixedZ;
+		return false;
+	}
+	else
+	{
+		x = newX;
+		y = newY;
+		z = newZ;
+		return true;
+	}
+
+}
+
+bool Ball::isColliding()
+{
+	if (fixedZ > ITOFIX(GOAL_BAR_Z2))
+	{
+		return false;
+	}
+
+	// Left post
+	if (fixedX >= ITOFIX(LEFT_POST_X1) && fixedX <= ITOFIX(LEFT_POST_X2))
+	{
+		// Top goal
+		if (fixedY >= ITOFIX(TOP_GOAL_POST_Y1) && fixedY <= ITOFIX(TOP_GOAL_POST_Y2))
+		{
+			return true;
+		}
+		// Bottom goal
+		if (fixedY >= ITOFIX(BOTTOM_GOAL_POST_Y1) && fixedY <= ITOFIX(BOTTOM_GOAL_POST_Y2))
+		{
+			return true;
+		}
+	}
+
+	// Right post
+	if (fixedX >= ITOFIX(RIGHT_POST_X1) && fixedX <= ITOFIX(RIGHT_POST_X2))
+	{
+		// Top goal
+		if (fixedY >= ITOFIX(TOP_GOAL_POST_Y1) && fixedY <= ITOFIX(TOP_GOAL_POST_Y2))
+		{
+			return true;
+		}
+		// Bottom goal
+		if (fixedY >= ITOFIX(BOTTOM_GOAL_POST_Y1) && fixedY <= ITOFIX(BOTTOM_GOAL_POST_Y2))
+		{
+			return true;
+		}
+	}
+
+	// Bar
+	if (fixedX >= ITOFIX(LEFT_POST_X1) && fixedX <= ITOFIX(RIGHT_POST_X2))
+	{
+		if (fixedZ >= ITOFIX(GOAL_BAR_Z1))
+		{
+			// Top goal
+			if (fixedY >= ITOFIX(TOP_GOAL_POST_Y1) && fixedY <= ITOFIX(TOP_GOAL_POST_Y2))
+			{
+				return true;
+			}
+			// Bottom goal
+			if (fixedY >= ITOFIX(BOTTOM_GOAL_POST_Y1) && fixedY <= ITOFIX(BOTTOM_GOAL_POST_Y2))
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+bool Ball::isInsideTopNet()
+{
+	return fixedX >= ITOFIX(GOAL_NET_X1) && fixedX <= ITOFIX(GOAL_NET_X2) && fixedY >= ITOFIX(TOP_GOAL_NET_Y1) && fixedY <= ITOFIX(TOP_GOAL_NET_Y2) && fixedZ <= ITOFIX(GOAL_BAR_Z1);
+}
+
+bool Ball::isInsideBottomNet()
+{
+	return fixedX >= ITOFIX(GOAL_NET_X1) && fixedX <= ITOFIX(GOAL_NET_X2) && fixedY >= ITOFIX(BOTTOM_GOAL_NET_Y1) && fixedY <= ITOFIX(BOTTOM_GOAL_NET_Y2) && fixedZ <= ITOFIX(GOAL_BAR_Z1);
 }

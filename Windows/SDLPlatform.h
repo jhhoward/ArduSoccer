@@ -9,9 +9,11 @@ class SDLPlatform : public PlatformBase
 public:
 	void init();
 	void run();
-	void drawPixel(uint8_t x, uint8_t y, uint8_t colour);
+	void drawPixel(int x, int y, uint8_t colour);
 	void playSound(uint8_t id);
 	void drawBitmap(int16_t x, int16_t y, const uint8_t* bitmap, uint8_t w, uint8_t h, uint8_t color);
+	void fillRect(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t colour);
+
 	
 private:
 	void drawPixel(SDL_Surface *surface, int x, int y, Uint32 pixel);
@@ -42,6 +44,10 @@ inline void clearPixel(uint8_t x, uint8_t y)
 inline void drawBitmap(int16_t x, int16_t y, const uint8_t* bitmap, uint8_t w, uint8_t h, uint8_t color)
 {
 	Platform.drawBitmap(x, y, bitmap, w, h, color);
+}
+inline void fillRect(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t colour)
+{
+	Platform.fillRect(x, y, w, h, colour);
 }
 
 void clearDisplay(uint8_t colour);

@@ -22,11 +22,15 @@ public:
 		Standing,
 		Walking,
 		Stunned,
-		SlideTackle
+		Fallen,
+		SlideTackle,
+		DiveLeft,
+		DiveRight
 	};
 
 	uint8_t index;
 	int x, y;
+	uint8_t z;
 	uint8_t team;
 
 	uint8_t direction : 8;
@@ -45,7 +49,8 @@ public:
 
 	static void getDirectionOffset(uint8_t direction, int8_t& dx, int8_t& dy);
 
-	
+	bool tryMove(int deltaX, int deltaY);
+	bool isColliding();
 
 	static int8_t ballDeltaX, ballDeltaY;
 };

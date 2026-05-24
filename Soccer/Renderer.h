@@ -25,9 +25,18 @@ public:
 	void drawLowerGoal();
 	void drawUpperGoal();
 
+	void showLargeMessage(const char* message);
+
+	void drawText(const char* text, int16_t x, int16_t y, uint8_t colour);
+
 	uint8_t drawOrder[NUM_DRAWABLES];
 
 	int getSortPosition(uint8_t drawable);
+
+private:
+	const char* largeMessage;
+	int largeMessageCounter;
+	uint8_t largeMessageX;
 };
 
 #endif

@@ -10,13 +10,18 @@ class Ball
 {
 public:
 	void update();
-	void setPosition(int x, int y, int z = 0);
+	bool setPosition(int x, int y, int z = 0);
 
 	int x, y, z;
 	int16_t fixedX, fixedY, fixedZ;
 	int16_t velocityX, velocityY, velocityZ;
 
-	uint8_t owner;
+	class Person* owner;
+
+private:
+	bool isColliding();
+	bool isInsideTopNet();
+	bool isInsideBottomNet();
 };
 
 #endif
