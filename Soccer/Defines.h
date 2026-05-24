@@ -15,10 +15,10 @@
 
 #if defined(EMULATE_ARDUBOY)
 // Arduboy
-//#define DISPLAYWIDTH 256
-//#define DISPLAYHEIGHT 320
-#define DISPLAYWIDTH 128
-#define DISPLAYHEIGHT 64
+#define DISPLAYWIDTH 256
+#define DISPLAYHEIGHT 320
+//#define DISPLAYWIDTH 128
+//#define DISPLAYHEIGHT 64
 #endif
 
 #if defined(EMULATE_UZEBOX)
@@ -102,7 +102,7 @@ using uint24_t = __uint24;
 
 #define MAX_CAMERA_DELTA 4
 
-#define GET_BALL_DISTANCE 10
+#define GET_BALL_DISTANCE 6 //10
 #define TACKLE_DISTANCE 6
 
 #define CENTER_MARK_X 128
@@ -133,9 +133,33 @@ using uint24_t = __uint24;
 #define BOTTOM_GOAL_NET_Y1 287
 #define BOTTOM_GOAL_NET_Y2 294
 
+#define PITCH_TOP 32
+#define PITCH_LEFT 14
+#define PITCH_BOTTOM 287
+#define PITCH_RIGHT 241
+
 
 #define PERSON_HALF_WIDTH 5
-
 #define GOALIE_DIVE_FRAMES 21
+
+enum
+{
+	WHITE_TEAM = 0,
+	BLACK_TEAM = 1,
+	REFEREE_TEAM = 2
+};
+
+enum Direction
+{
+	North,
+	NorthEast,
+	East,
+	SouthEast,
+	South,
+	SouthWest,
+	West,
+	NorthWest,
+	NoDirection
+};
 
 #endif

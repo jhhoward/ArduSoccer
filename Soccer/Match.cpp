@@ -9,10 +9,17 @@ void Match::reset()
 	}
 	engine.ball.setPosition(CENTER_MARK_X, CENTER_MARK_Y);
 
-	state = Match::KickOff;
+	setState(Match::KickOff);
 }
 
 void Match::update()
 {
 
+	timeInState++;
+}
+
+void Match::setState(Match::State newState)
+{
+	state = newState;
+	timeInState = 0;
 }

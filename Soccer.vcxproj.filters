@@ -39,6 +39,12 @@
     <ClInclude Include="Soccer\Match.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Soccer\MathsFunctions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Soccer\Team.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Windows\SDLPlatform.cpp">
@@ -60,6 +66,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Soccer\Match.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Soccer\Team.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Soccer\MathsFunctions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

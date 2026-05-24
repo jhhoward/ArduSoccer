@@ -20,7 +20,10 @@ public:
 	void reset();
 	void update();
 
+	void setState(Match::State newState);
+
 	State state;
+	uint32_t timeInState;
 };
 
 #endif

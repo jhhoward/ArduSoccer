@@ -1,18 +1,7 @@
 #ifndef PERSON_H_
 #define PERSON_H_
 
-enum Direction
-{
-	North,
-	NorthEast,
-	East,
-	SouthEast,
-	South,
-	SouthWest,
-	West,
-	NorthWest,
-	NoDirection
-};
+#include "Defines.h"
 
 class Person
 {
@@ -44,8 +33,10 @@ public:
 	void update();
 	void stun(uint8_t frames, bool shouldFall = false);
 	void kickBall(int velocityX, int velocityY, int velocityZ);
+	void goalieDive();
 
 	bool isOnScreen();
+	bool isGoalie() { return index == 0 || index == PLAYERS_PER_TEAM; }
 
 	static void getDirectionOffset(uint8_t direction, int8_t& dx, int8_t& dy);
 

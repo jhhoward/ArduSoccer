@@ -15,16 +15,20 @@
     <ClInclude Include="Soccer\Defines.h" />
     <ClInclude Include="Soccer\Engine.h" />
     <ClInclude Include="Soccer\Match.h" />
+    <ClInclude Include="Soccer\MathsFunctions.h" />
     <ClInclude Include="Soccer\Person.h" />
     <ClInclude Include="Soccer\Platform.h" />
     <ClInclude Include="Soccer\Renderer.h" />
+    <ClInclude Include="Soccer\Team.h" />
     <ClInclude Include="Windows\SDLPlatform.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Soccer\Ball.cpp" />
     <ClCompile Include="Soccer\Match.cpp" />
+    <ClCompile Include="Soccer\MathsFunctions.cpp" />
     <ClCompile Include="Soccer\Person.cpp" />
     <ClCompile Include="Soccer\Renderer.cpp" />
+    <ClCompile Include="Soccer\Team.cpp" />
     <ClCompile Include="Windows\lodepng.cpp" />
     <ClCompile Include="Soccer\Engine.cpp" />
     <ClCompile Include="Windows\SDLPlatform.cpp" />

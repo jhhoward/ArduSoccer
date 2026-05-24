@@ -12,6 +12,7 @@
 #include "Person.h"
 #include "Ball.h"
 #include "Match.h"
+#include "Team.h"
 
 enum
 {
@@ -42,6 +43,7 @@ public:
 	Person people[NUM_PEOPLE];
 	Ball ball;
 	Match match;
+	Team teams[2];
 
 	uint8_t personPlayer1;
 	bool changingPlayer1;

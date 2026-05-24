@@ -1,5 +1,6 @@
 #include "Engine.h"
 #include "Person.h"
+#include "MathsFunctions.h"
 
 const int16_t startingPositions[] PROGMEM =
 {
@@ -274,6 +275,71 @@ void Person::update()
 
 		uint8_t inputDirection = pgm_read_byte(&inputToDirection[input & 0xf]);
 
+		if (team == 2)
+		{
+			inputDirection = calculateFacingDirection(x, y, engine.ball.x, engine.ball.y);
+			int distanceToBall = estimateDistance(x, y, engine.ball.x, engine.ball.y);
+			
+			if (distanceToBall < 32)
+			{
+				inputDirection = (inputDirection + 4) & 7;
+			}
+			else if (distanceToBall < 64)
+			{
+				inputDirection = NoDirection;
+			}
+		}
+		if (index != engine.personPlayer1 && team != 2)
+		{
+			{
+				int16_t targetX, targetY;
+				engine.teams[team].calculateFormationPosition(index, targetX, targetY);
+				int formationLooseness = 24;
+
+				if (isGoalie() || estimateDistance(x, y, targetX, targetY) > formationLooseness)
+				{
+					inputDirection = calculateFacingDirection(x, y, targetX, targetY);
+				}
+				//int16_t targetX = pgm_read_word(&startingPositions[index * 2]);
+				//int16_t targetY = pgm_read_word(&startingPositions[index * 2 + 1]);
+			}
+
+			if (engine.ball.owner == this)
+			{
+				if (isGoalie())
+				{
+					uint8_t targetDirection = team ? North : South;
+					if (direction == targetDirection)
+					{
+						input |= Input_Btn_A;
+					}
+					inputDirection = targetDirection;
+				}
+				else
+				{
+					inputDirection = calculateFacingDirection(x, y, 128, TOP_GOAL_POST_Y1);
+				}
+			}
+			else
+			{
+				if (!engine.ball.owner || !engine.ball.owner->isGoalie())
+				{
+					if (engine.teams[team].getClosestPlayer(engine.ball.x, engine.ball.y) == this)
+					{
+						inputDirection = calculateFacingDirection(x, y, engine.ball.x, engine.ball.y);
+
+						if (engine.ball.owner && engine.ball.owner->team != team)
+						{
+							if (estimateDistance(x, y, engine.ball.x, engine.ball.y) < 10)
+							{
+								input |= Input_Btn_B;
+							}
+						}
+					}
+				}
+			}
+		}
+
 		if (inputDirection != NoDirection)
 		{
 			state = Person::Walking;
@@ -318,13 +384,6 @@ void Person::update()
 
 		if (input & Input_Btn_A)
 		{
-			if (1)
-			{
-				state = Person::DiveLeft;
-				//direction = South;
-				animationFrame = 0;
-				return;
-			}
 			if (engine.ball.owner == this)
 			{
 				// Pass
@@ -492,6 +551,15 @@ void Person::update()
 			if (state == Person::SlideTackle)
 			{
 				engine.ball.owner->stun(SLIDE_TACKLE_RECOVERY_FRAMES, true);
+				engine.ball.owner = this;
+				ballDeltaX = diffX;
+				ballDeltaY = diffY;
+			}
+
+			/*
+			if (state == Person::SlideTackle)
+			{
+				engine.ball.owner->stun(SLIDE_TACKLE_RECOVERY_FRAMES, true);
   			}
 			else
 			{
@@ -500,6 +568,7 @@ void Person::update()
 			engine.ball.owner = this;
 			ballDeltaX = diffX;
 			ballDeltaY = diffY;
+			*/
 		}
 	}
 
@@ -523,7 +592,7 @@ void Person::update()
 			// Dribbling the ball
 			int ballZ = engine.ball.z;
 
-			if (0)
+			if (isGoalie())
 			{
 				// Goalie Holding ball in hands
 				ballZ = z + 4;
@@ -641,4 +710,11 @@ bool Person::isColliding()
 	}
 
 	return false;
+}
+
+void Person::goalieDive()
+{
+	state = Person::DiveLeft;
+	direction = South;
+	animationFrame = 0;
 }

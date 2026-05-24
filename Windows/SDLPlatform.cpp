@@ -406,6 +406,23 @@ void SDLPlatform::run()
 		engine.update();
 		engine.draw();
 
+		for (int n = 0; n < 5; n++)
+		{
+			int16_t formationX, formationY;
+
+			engine.teams[0].calculateFormationPosition(n, formationX, formationY);
+			drawPixel(formationX, formationY, 3);
+			drawPixel(formationX + 1, formationY, 3);
+			drawPixel(formationX + 1, formationY + 1, 3);
+			drawPixel(formationX, formationY + 1, 3);
+
+			engine.teams[1].calculateFormationPosition(n, formationX, formationY);
+			drawPixel(formationX, formationY, 2);
+			drawPixel(formationX + 1, formationY, 2);
+			drawPixel(formationX + 1, formationY + 1, 2);
+			drawPixel(formationX, formationY + 1, 2);
+		}
+
 		SDL_UpdateTexture(m_screenTexture, NULL, m_screenSurface->pixels, m_screenSurface->pitch);
 		SDL_RenderCopy(m_appRenderer, m_screenTexture, NULL, NULL);
 		SDL_RenderPresent(m_appRenderer);
@@ -449,6 +466,8 @@ uint8_t paletteColours[] =
 #elif defined(EMULATE_ARDUBOY)
 	0, 0, 0,
 	255, 255, 255,
+	255, 0, 0,
+	0, 255, 0
 #elif 1
 	0, 0, 0,
 	170, 170, 170,
@@ -464,7 +483,7 @@ uint8_t paletteColours[] =
 
 void SDLPlatform::drawPixel(int x, int y, uint8_t colour)
 {
-	if (x >= DISPLAYWIDTH || y >= DISPLAYHEIGHT)
+	if (x < 0 || y < 0 || x >= DISPLAYWIDTH || y >= DISPLAYHEIGHT)
 	{
 		return;
 	}
@@ -510,7 +529,7 @@ void SDLPlatform::fillRect(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t c
 	{
 		for (int j = 0; j < h; j++)
 		{
-			drawPixel(x + i, y + j, colour);
+			Platform.drawPixel(x + i, y + j, colour);
 		}
 	}
 }
@@ -521,7 +540,7 @@ void clearDisplay(uint8_t colour)
 	{
 		for(int x = 0; x < DISPLAYWIDTH; x++)
 		{
-			drawPixel(x, y, colour);
+			Platform.drawPixel(x, y, colour);
 		}
 	}
 }

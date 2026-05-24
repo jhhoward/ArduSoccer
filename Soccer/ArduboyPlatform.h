@@ -34,4 +34,10 @@ inline void drawBitmap(int16_t x, int16_t y, const uint8_t* bitmap, uint8_t w, u
 	arduboy.drawBitmap(x, y, bitmap, w, h, color);
 }
 
+inline void fillRect(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t colour)
+{
+	arduboy.fillRect(x, y, w, h, colour);
+}
+
+
 

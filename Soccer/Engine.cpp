@@ -1,4 +1,5 @@
 #include "Engine.h"
+#include "MathsFunctions.h"
 
 Engine engine;
 
@@ -8,32 +9,15 @@ void Engine::init()
 
 	personPlayer1 = 0;
 
-	match.reset();
+	teams[WHITE_TEAM].init(people);
+	teams[BLACK_TEAM].init(people + PLAYERS_PER_TEAM);
 
+	match.reset();
 }
 
 
 void Engine::update()
 {
-	//uint8_t input = Platform.readInput();
-	//
-	//if (input & Input_Dpad_Up)
-	//{
-	//	camera.y--;
-	//}
-	//if (input & Input_Dpad_Down)
-	//{
-	//	camera.y++;
-	//}
-	//if (input & Input_Dpad_Left)
-	//{
-	//	camera.x--;
-	//}
-	//if (input & Input_Dpad_Right)
-	//{
-	//	camera.x++;
-	//}
-
 	switch(gameState)
 	{
 	case GameState_Playing:
@@ -56,17 +40,9 @@ void Engine::update()
 				for (int n = 0; n < NUM_PEOPLE; n++)
 				{
 					Person& person = people[n];
-					if (person.team == 0 && n != personPlayer1)
+					if (person.team == 0 && n != personPlayer1 && !person.isGoalie())
 					{
-						int diffX = (ball.x - person.x);
-						int diffY = (ball.y - person.y);
-
-						if (diffX < 0)
-							diffX = -diffX;
-						if (diffY < 0)
-							diffY = -diffY;
-
-						int distance = diffX + diffY;
+						int distance = estimateDistance(ball.x, ball.y, person.x, person.y);
 
 						if (closest == -1 || distance < closestDistance)
 						{
@@ -79,6 +55,8 @@ void Engine::update()
 			}
 
 			match.update();
+			teams[WHITE_TEAM].update();
+			teams[BLACK_TEAM].update();
 
 			updateCamera();
 		}
@@ -106,7 +84,7 @@ void Engine::updateCamera()
 		targetCameraOffsetX = ball.velocityX >> 2;
 		targetCameraOffsetY = ball.velocityY >> 2;
 
-		if (targetCameraOffsetX == 0 && targetCameraOffsetY == 0)
+		if (targetCameraOffsetX == 0 && targetCameraOffsetY == 0 && 0)
 		{
 			// Try get the player controlled character in view instead
 			Person& person = people[personPlayer1];
