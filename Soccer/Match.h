@@ -14,13 +14,22 @@ public:
 		ThrowIn,
 		GoalKick,
 		Penalty,
-		FreeKick
+		FreeKick,
+		Scored
 	};
 
 	void reset();
 	void update();
 
 	void setState(Match::State newState);
+	bool shouldAllowFreeMovement();
+	bool shouldAllowKicking();
+
+	void setupKickOff(Team* team);	
+	void onKick();
+
+	Person* electedKicker;
+	Team* electedTeam;
 
 	State state;
 	uint32_t timeInState;

@@ -78,6 +78,8 @@ void Ball::update()
 	{
 		// Still apply Z physics if has a ball owner
 		fixedZ += velocityZ;
+
+		ownerTimer++;
 	}
 
 	if (fixedZ < 0)

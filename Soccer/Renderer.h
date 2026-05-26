@@ -24,8 +24,10 @@ public:
 	void drawBallShadow();
 	void drawLowerGoal();
 	void drawUpperGoal();
+	void drawOffScreenArrow(class Team* team);
 
 	void showLargeMessage(const char* message);
+	bool isShowingLargeMessage() { return largeMessageCounter > 0; }
 
 	void drawText(const char* text, int16_t x, int16_t y, uint8_t colour);
 

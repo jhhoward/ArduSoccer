@@ -33,8 +33,8 @@ public:
 	void update();
 	void draw();
 
-	void cycleSelectedPerson() { changingPlayer1 = true; }
-	
+	void setCameraFocus(int focusX, int focusY);
+
 	int16_t frameCount;
 	uint8_t gameState;
 
@@ -44,9 +44,6 @@ public:
 	Ball ball;
 	Match match;
 	Team teams[2];
-
-	uint8_t personPlayer1;
-	bool changingPlayer1;
 
 private:
 	void updateCamera();

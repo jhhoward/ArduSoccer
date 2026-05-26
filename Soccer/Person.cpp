@@ -220,6 +220,8 @@ void Person::kickBall(int velocityX, int velocityY, int velocityZ)
 	stun(KICK_RECOVERY_FRAMES);
 	animation = pgm_read_byte(&directionToWalkAnimation[direction]);
 	displayFrame = pgm_read_byte(&walkAnimations[animation * 4 + 1]);
+
+	engine.match.onKick();
 }
 
 void Person::update()
@@ -243,11 +245,24 @@ void Person::update()
 	{
 		uint8_t input = 0;
 
-		if (index == engine.personPlayer1)
+		if (isSelectedPlayer())
 		{
-			input = Platform.readInput();
+			if (getTeam()->controllerType == Team::LocalPlayer)
+			{
+				input = Platform.readInput();
+			}
 
-			if (engine.ball.owner != this)
+			if (!engine.match.shouldAllowFreeMovement())
+			{
+				input &= ~0xf;
+			}
+
+			if (!engine.match.shouldAllowKicking())
+			{
+				input = 0;
+			}
+
+			if (!hasBall())
 			{
 				bool swapBecauseOffScreen = false;
 
@@ -268,14 +283,15 @@ void Person::update()
 				if (swapBecauseOffScreen || (Platform.readInputDown() & Input_Btn_A))
 				{
 					// Swap selected player if pressing A or off screen
-					engine.cycleSelectedPerson();
+					getTeam()->cycleSelectedPlayer();
 				}
 			}
 		}
 
 		uint8_t inputDirection = pgm_read_byte(&inputToDirection[input & 0xf]);
 
-		if (team == 2)
+		// Referee AI - follow ball around
+		if (team == REFEREE_TEAM)
 		{
 			inputDirection = calculateFacingDirection(x, y, engine.ball.x, engine.ball.y);
 			int distanceToBall = estimateDistance(x, y, engine.ball.x, engine.ball.y);
@@ -289,12 +305,14 @@ void Person::update()
 				inputDirection = NoDirection;
 			}
 		}
-		if (index != engine.personPlayer1 && team != 2)
+
+		if (!isSelectedPlayer() && team != REFEREE_TEAM)
 		{
+			// Follow formation
 			{
 				int16_t targetX, targetY;
-				engine.teams[team].calculateFormationPosition(index, targetX, targetY);
-				int formationLooseness = 24;
+				getTeam()->calculateFormationPosition(index, targetX, targetY);
+				int formationLooseness = 16;
 
 				if (isGoalie() || estimateDistance(x, y, targetX, targetY) > formationLooseness)
 				{
@@ -304,34 +322,56 @@ void Person::update()
 				//int16_t targetY = pgm_read_word(&startingPositions[index * 2 + 1]);
 			}
 
-			if (engine.ball.owner == this)
+			if (hasBall())
 			{
 				if (isGoalie())
 				{
 					uint8_t targetDirection = team ? North : South;
-					if (direction == targetDirection)
+					if (direction == targetDirection && engine.ball.ownerTimer > 32)
 					{
 						input |= Input_Btn_A;
 					}
-					inputDirection = targetDirection;
+					
+					if (direction != targetDirection)
+					{
+						inputDirection = targetDirection;
+					}
 				}
 				else
 				{
-					inputDirection = calculateFacingDirection(x, y, 128, TOP_GOAL_POST_Y1);
+					int goalX = BACKGROUND_WIDTH / 2;
+					int goalY = getTeam()->isTopHalf() ? PITCH_BOTTOM : PITCH_TOP;
+
+					inputDirection = calculateFacingDirection(x, y, goalX, goalY);
+
+					if (estimateDistance(x, y, goalX, goalY) < 48)
+					{
+						input |= Input_Btn_B;
+					}
+
+					if (engine.ball.ownerTimer > 60)
+					{
+						input |= Input_Btn_A;
+					}
 				}
 			}
 			else
 			{
-				if (!engine.ball.owner || !engine.ball.owner->isGoalie())
+				bool shouldChaseBall = engine.match.shouldAllowFreeMovement();
+
+				if (shouldChaseBall && (!engine.ball.owner || !engine.ball.owner->isHoldingBall()))
 				{
-					if (engine.teams[team].getClosestPlayer(engine.ball.x, engine.ball.y) == this)
+					if (getTeam()->getClosestPlayer(engine.ball.x, engine.ball.y) == this)
 					{
 						inputDirection = calculateFacingDirection(x, y, engine.ball.x, engine.ball.y);
 
 						if (engine.ball.owner && engine.ball.owner->team != team)
 						{
-							if (estimateDistance(x, y, engine.ball.x, engine.ball.y) < 10)
+							bool autoSlideTackle = true;
+
+							if (estimateDistance(x, y, engine.ball.x, engine.ball.y) < 10 && (autoSlideTackle || team != 0 || isGoalie()))
 							{
+								// Slide tackle opponent
 								input |= Input_Btn_B;
 							}
 						}
@@ -345,7 +385,7 @@ void Person::update()
 			state = Person::Walking;
 
 			// Slow turn if dribbling the ball
-			if (engine.ball.owner == this)
+			if (hasBall())
 			{
 				int directionDelta = inputDirection - direction;
 				if (directionDelta > 4 || directionDelta < -4)
@@ -379,30 +419,57 @@ void Person::update()
 		else
 		{
 			state = Person::Standing;
+
+			if (!isSelectedPlayer() && !hasBall())
+			{
+				// Face the ball
+				//direction = calculateFacingDirection(x, y, engine.ball.x, engine.ball.y);
+			}
+
+			// Check if the goalie needs to dive
+			if (isGoalie() && engine.ball.owner == nullptr)
+			{
+				if ((engine.ball.x < x - PERSON_HALF_WIDTH || engine.ball.x > x + PERSON_HALF_WIDTH)
+					&& engine.ball.x > LEFT_POST_X1 - PERSON_HALF_WIDTH && engine.ball.x < RIGHT_POST_X2 + PERSON_HALF_WIDTH)
+				{
+					if (getTeam()->isTopHalf())
+					{
+						if (engine.ball.y < PITCH_TOP + 32 && engine.ball.velocityY < -16)
+						{
+							goalieDive();
+						}
+					}
+					else
+					{
+						if (engine.ball.y > PITCH_BOTTOM - 32 && engine.ball.velocityY > 16)
+						{
+							goalieDive();
+						}
+					}
+				}
+			}
 		}
 
 
 		if (input & Input_Btn_A)
 		{
-			if (engine.ball.owner == this)
+			if (hasBall())
 			{
 				// Pass
 				int8_t deltaX = ((int8_t)pgm_read_byte(&directionToX[direction]));
 				int8_t deltaY = ((int8_t)pgm_read_byte(&directionToY[direction]));
 
-				kickBall(deltaX * 50, deltaY * 50, 50);
+				tryPass();
+				//kickBall(deltaX * 50, deltaY * 50, 50);
 				return;
 			}
 		}
 		if (input & Input_Btn_B)
 		{
-			if (engine.ball.owner == this)
+			if (hasBall())
 			{
 				// Shoot
-				int8_t deltaX = ((int8_t)pgm_read_byte(&directionToX[direction]));
-				int8_t deltaY = ((int8_t)pgm_read_byte(&directionToY[direction]));
-
-				kickBall(deltaX * 60, deltaY * 60, 75);
+				tryShoot();
 				return;
 			}
 			else
@@ -499,12 +566,12 @@ void Person::update()
 			}
 
 			// Check if we are fouling anyone
-			if (engine.ball.owner != this)
+			if (!hasBall())
 			{
 				for (int n = 0; n < PLAYERS_PER_TEAM * 2; n++)
 				{
 					Person& other = engine.people[n];
-					if (other.team != team && engine.ball.owner != &other && other.state != Person::Stunned && other.state != Person::Fallen)
+					if (other.team != team && !other.hasBall() && other.state != Person::Stunned && other.state != Person::Fallen)
 					{
 						int diffX = other.x - x;
 						int diffY = other.y - y;
@@ -535,28 +602,24 @@ void Person::update()
 	}
 
 	// Check for tackling / gaining control of the ball
-	if (team != 2 && engine.ball.z < PERSON_HEIGHT)
+	if (team != REFEREE_TEAM && engine.ball.z < PERSON_HEIGHT && engine.match.shouldAllowFreeMovement())
 	{
 		int diffX = engine.ball.x - x;
 		int diffY = engine.ball.y - y;
 
 		if (engine.ball.owner == NULL && diffX >= -GET_BALL_DISTANCE && diffX <= GET_BALL_DISTANCE && diffY >= -GET_BALL_DISTANCE && diffY <= GET_BALL_DISTANCE)
 		{
-			engine.ball.owner = this;
-			ballDeltaX = diffX;
-			ballDeltaY = diffY;
+			takeBall();
 		}
 		else if (engine.ball.owner && engine.ball.owner->team != team && diffX >= -TACKLE_DISTANCE && diffX <= TACKLE_DISTANCE && diffY >= -TACKLE_DISTANCE && diffY <= TACKLE_DISTANCE)
 		{
-			if (state == Person::SlideTackle)
+#if 1
+			if (state == Person::SlideTackle && !engine.ball.owner->isHoldingBall())
 			{
 				engine.ball.owner->stun(SLIDE_TACKLE_RECOVERY_FRAMES, true);
-				engine.ball.owner = this;
-				ballDeltaX = diffX;
-				ballDeltaY = diffY;
+				takeBall();
 			}
-
-			/*
+#else
 			if (state == Person::SlideTackle)
 			{
 				engine.ball.owner->stun(SLIDE_TACKLE_RECOVERY_FRAMES, true);
@@ -565,14 +628,12 @@ void Person::update()
 			{
 				engine.ball.owner->stun(TACKLE_RECOVERY_FRAMES);
 			}
-			engine.ball.owner = this;
-			ballDeltaX = diffX;
-			ballDeltaY = diffY;
-			*/
+			takeBall();
+#endif
 		}
 	}
 
-	if (engine.ball.owner == this)
+	if (hasBall())
 	{
 		int8_t deltaX, deltaY;
 		getDirectionOffset(direction, deltaX, deltaY);
@@ -592,7 +653,7 @@ void Person::update()
 			// Dribbling the ball
 			int ballZ = engine.ball.z;
 
-			if (isGoalie())
+			if (isHoldingBall())
 			{
 				// Goalie Holding ball in hands
 				ballZ = z + 4;
@@ -604,6 +665,18 @@ void Person::update()
 				// Dribbling on floor
 				deltaX *= 6;
 				deltaY *= 4;
+
+				if (deltaX == 0 && deltaY < 0)
+				{
+					if (x < BACKGROUND_WIDTH / 2)
+					{
+						deltaX = 5;
+					}
+					else
+					{
+						deltaX = -5;
+					}
+				}
 			}
 
 			if (ballDeltaX < deltaX)
@@ -615,12 +688,10 @@ void Person::update()
 			else if (ballDeltaY > deltaY)
 				ballDeltaY--;
 
-			if (team == 0)
+			if (getTeam()->controllerType != Team::ComputerPlayer)
 			{
-				engine.personPlayer1 = index;
+				getTeam()->selectedPlayer = this;
 			}
-
-
 
 			engine.ball.setPosition(x + ballDeltaX, y + ballDeltaY, ballZ);
 		}
@@ -636,11 +707,12 @@ void Person::getDirectionOffset(uint8_t direction, int8_t& dx, int8_t& dy)
 bool Person::tryMove(int deltaX, int deltaY)
 {
 	bool moved = false;
+	bool isRestrictedToPenaltyBox = isHoldingBall();
 
 	if (deltaX != 0)
 	{
 		x += deltaX;
-		if (isColliding())
+		if (isColliding() || (isRestrictedToPenaltyBox && !isInOwnPenaltyBox()))
 		{
 			x -= deltaX;
 		}
@@ -649,7 +721,7 @@ bool Person::tryMove(int deltaX, int deltaY)
 	if (deltaY != 0)
 	{
 		y += deltaY;
-		if (isColliding())
+		if (isColliding() || (isRestrictedToPenaltyBox && !isInOwnPenaltyBox()))
 		{
 			y -= deltaY;
 		}
@@ -661,6 +733,15 @@ bool Person::tryMove(int deltaX, int deltaY)
 
 bool Person::isColliding()
 {
+	if (x < PERSON_HALF_WIDTH)
+		return true;
+	if (y < 16)
+		return true;
+	if (x >= BACKGROUND_WIDTH - PERSON_HALF_WIDTH)
+		return true;
+	if (y >= BACKGROUND_HEIGHT)
+		return true;
+
 	// Left post
 	if (x >= LEFT_POST_X1 && x <= LEFT_POST_X2)
 	{
@@ -697,14 +778,18 @@ bool Person::isColliding()
 	if (x >= GOAL_NET_X1 && x <= GOAL_NET_X2 && y >= BOTTOM_GOAL_NET_Y1 && y <= BOTTOM_GOAL_NET_Y2)
 		return true;
 
+	// Person can collide with another person if one of them has the ball
 	for (int n = 0; n < NUM_PEOPLE; n++)
 	{
 		Person& other = engine.people[n];
 		if (&other != this && other.state != Person::Fallen)
 		{
-			if (y >= other.y - 1 && y <= other.y + 1 && x >= other.x - PERSON_HALF_WIDTH && x <= other.x + PERSON_HALF_WIDTH)
+			if (hasBall() || other.hasBall())
 			{
-				return true;
+				if (y >= other.y - 1 && y <= other.y + 1 && x >= other.x - PERSON_HALF_WIDTH && x <= other.x + PERSON_HALF_WIDTH)
+				{
+					return true;
+				}
 			}
 		}
 	}
@@ -714,7 +799,194 @@ bool Person::isColliding()
 
 void Person::goalieDive()
 {
-	state = Person::DiveLeft;
-	direction = South;
+	if (getTeam()->isTopHalf())
+	{
+		direction = South;
+	}
+	else
+	{
+		direction = North;
+	}
+
+	if (engine.ball.x < x)
+	{
+		state = Person::DiveLeft;
+	}
+	else
+	{
+		state = Person::DiveRight;
+	}
+
 	animationFrame = 0;
+}
+
+void Person::tryShoot()
+{
+	int goalX = BACKGROUND_WIDTH / 2;
+	int goalY = 0;
+
+	if (getTeam()->isTopHalf())
+	{
+		goalY = PITCH_BOTTOM;
+	}
+	else
+	{
+		goalY = PITCH_TOP;
+	}
+
+	// Check if we are facing the right direction
+	uint8_t goalDirection = calculateFacingDirection(x, y, goalX, goalY);
+
+	if (direction == goalDirection)
+	{
+		// Just kick in the facing direction
+		int8_t deltaX = ((int8_t)pgm_read_byte(&directionToX[direction]));
+		int8_t deltaY = ((int8_t)pgm_read_byte(&directionToY[direction]));
+		kickBall(deltaX * 60, deltaY * 60, 75);
+	}
+	else
+	{
+		// Aim toward the goal;
+		int dirX = goalX - x;
+		int dirY = goalY - y;
+		int16_t magnitude = estimateMagnitude(dirX, dirY);
+
+		const int MASS_PASS_MAGNITUDE = 128;
+
+		while (magnitude > MASS_PASS_MAGNITUDE)
+		{
+			magnitude >>= 1;
+			dirX /= 2;
+			dirY /= 2;
+		}
+
+		int16_t dirZ = magnitude >> 1;
+
+		if (dirZ < 30)
+		{
+			dirZ = 30;
+		}
+
+		kickBall(dirX, dirY, dirZ);
+	}
+}
+
+void Person::tryPass()
+{
+	Team* team = getTeam();
+	Person* target = nullptr;
+	int targetDistance = -1;
+
+	for (int pass = 0; pass < 3; pass++)
+	{
+		for (int n = 1; n < PLAYERS_PER_TEAM; n++)
+		{
+			Person* other = &team->players[n];
+			if (other != this)
+			{
+				if (pass == 0)
+				{
+					// Check for the correct direction
+					uint8_t targetDirection = calculateFacingDirection(x, y, other->x, other->y);
+					if (direction != targetDirection)
+					{
+						continue;
+					}
+				}
+				if (pass == 1)
+				{
+					// Check for the almost the correct direction
+					uint8_t targetDirection = calculateFacingDirection(x, y, other->x, other->y);
+					int diff = targetDirection - direction;
+					if (diff < 0)
+						diff = -diff;
+					if (diff > 4)
+						diff = 8 - diff;
+
+					if (diff > 2)
+					{
+						continue;
+					}
+				}
+
+				int distance = estimateDistance(x, y, other->x, other->y);
+
+				if (!target || distance < targetDistance)
+				{
+					target = other;
+					targetDistance = distance;
+				}
+			}
+		}
+
+		if (target)
+			break;
+	}
+
+	int16_t dirX = target->x - x;
+	int16_t dirY = target->y - y;
+	int16_t magnitude = estimateMagnitude(dirX, dirY);
+
+	const int MASS_PASS_MAGNITUDE = 128;
+
+	while (magnitude > MASS_PASS_MAGNITUDE)
+	{
+		magnitude >>= 1;
+		dirX /= 2;
+		dirY /= 2;
+	}
+	
+	int16_t dirZ = magnitude >> 1;
+
+	if (dirZ < 30)
+	{
+		dirZ = 30;
+	}
+	//dirX *= 2;
+	//dirY *= 2;
+
+	kickBall(dirX, dirY, dirZ);
+}
+
+Team* Person::getTeam()
+{
+	if (team == REFEREE_TEAM)
+		return nullptr;
+	return &engine.teams[team];
+}
+
+void Person::takeBall()
+{
+	int diffX = engine.ball.x - x;
+	int diffY = engine.ball.y - y;
+	engine.ball.owner = this;
+	engine.ball.ownerTimer = 0;
+	ballDeltaX = diffX;
+	ballDeltaY = diffY;
+}
+
+bool Person::isInOwnPenaltyBox()
+{
+	if (getTeam()->isTopHalf())
+	{
+		return x > (BACKGROUND_WIDTH / 2) - (PENALTY_BOX_WIDTH / 2)
+			&& x < (BACKGROUND_WIDTH / 2) + (PENALTY_BOX_WIDTH / 2)
+			&& y > PITCH_TOP && y < PITCH_TOP + PENALTY_BOX_HEIGHT;
+	}
+	else
+	{
+		return x > (BACKGROUND_WIDTH / 2) - (PENALTY_BOX_WIDTH / 2)
+			&& x < (BACKGROUND_WIDTH / 2) + (PENALTY_BOX_WIDTH / 2)
+			&& y < PITCH_BOTTOM && y > PITCH_BOTTOM - PENALTY_BOX_HEIGHT;
+	}
+}
+
+bool Person::hasBall()
+{
+	return engine.ball.owner == this;
+}
+
+bool Person::isSelectedPlayer()
+{
+	return team != REFEREE_TEAM && getTeam()->selectedPlayer == this;
 }

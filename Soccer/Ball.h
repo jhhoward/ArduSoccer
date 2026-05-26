@@ -17,11 +17,13 @@ public:
 	int16_t velocityX, velocityY, velocityZ;
 
 	class Person* owner;
+	uint16_t ownerTimer;
+
+	bool isInsideTopNet();
+	bool isInsideBottomNet();
 
 private:
 	bool isColliding();
-	bool isInsideTopNet();
-	bool isInsideBottomNet();
 };
 
 #endif

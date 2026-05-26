@@ -7,10 +7,8 @@ void Engine::init()
 {
 	gameState = GameState_Playing;
 
-	personPlayer1 = 0;
-
-	teams[WHITE_TEAM].init(people);
-	teams[BLACK_TEAM].init(people + PLAYERS_PER_TEAM);
+	teams[WHITE_TEAM].init(people, Team::LocalPlayer);
+	teams[BLACK_TEAM].init(people + PLAYERS_PER_TEAM, Team::ComputerPlayer);
 
 	match.reset();
 }
@@ -27,31 +25,6 @@ void Engine::update()
 			for (uint8_t n = 0; n < NUM_PEOPLE; n++)
 			{
 				people[n].update();
-			}
-
-			if (changingPlayer1)
-			{
-				changingPlayer1 = false;
-
-				// Find player closest to the ball that isn't the current one
-				int closest = -1;
-				int closestDistance = 0;
-
-				for (int n = 0; n < NUM_PEOPLE; n++)
-				{
-					Person& person = people[n];
-					if (person.team == 0 && n != personPlayer1 && !person.isGoalie())
-					{
-						int distance = estimateDistance(ball.x, ball.y, person.x, person.y);
-
-						if (closest == -1 || distance < closestDistance)
-						{
-							closest = n;
-							closestDistance = distance;
-						}
-					}
-				}
-				personPlayer1 = closest;
 			}
 
 			match.update();
@@ -84,7 +57,7 @@ void Engine::updateCamera()
 		targetCameraOffsetX = ball.velocityX >> 2;
 		targetCameraOffsetY = ball.velocityY >> 2;
 
-		if (targetCameraOffsetX == 0 && targetCameraOffsetY == 0 && 0)
+		/*if (targetCameraOffsetX == 0 && targetCameraOffsetY == 0 && 0)
 		{
 			// Try get the player controlled character in view instead
 			Person& person = people[personPlayer1];
@@ -110,14 +83,17 @@ void Engine::updateCamera()
 			{
 				targetCameraOffsetY = maxY;
 			}
-		}
+		}*/
 	}
 	else
 	{
-		int8_t deltaX, deltaY;
-		Person::getDirectionOffset(ball.owner->direction, deltaX, deltaY);
-		targetCameraOffsetX = deltaX * 5;
-		targetCameraOffsetY = deltaY * 12;
+		if (engine.match.state != Match::KickOff)
+		{
+			int8_t deltaX, deltaY;
+			Person::getDirectionOffset(ball.owner->direction, deltaX, deltaY);
+			targetCameraOffsetX = deltaX * 5;
+			targetCameraOffsetY = deltaY * 12;
+		}
 	}
 
 	if (camera.offsetX < targetCameraOffsetX)
@@ -164,6 +140,21 @@ void Engine::updateCamera()
 	if (camera.y > BACKGROUND_HEIGHT - DISPLAYHEIGHT)
 		camera.y = BACKGROUND_HEIGHT - DISPLAYHEIGHT;
 
+}
+
+void Engine::setCameraFocus(int focusX, int focusY)
+{
+	camera.x = focusX - HALF_DISPLAYWIDTH;
+	camera.y = focusY - HALF_DISPLAYHEIGHT;
+
+	if (camera.x < 0)
+		camera.x = 0;
+	if (camera.x > BACKGROUND_WIDTH - DISPLAYWIDTH)
+		camera.x = BACKGROUND_WIDTH - DISPLAYWIDTH;
+	if (camera.y < 0)
+		camera.y = 0;
+	if (camera.y > BACKGROUND_HEIGHT - DISPLAYHEIGHT)
+		camera.y = BACKGROUND_HEIGHT - DISPLAYHEIGHT;
 }
 
 void Engine::draw()

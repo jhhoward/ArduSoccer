@@ -14,6 +14,16 @@ int16_t estimateDistance(int16_t x1, int16_t y1, int16_t x2, int16_t y2)
     return h + (l >> 2);
 }
 
+int16_t estimateMagnitude(int16_t dx, int16_t dy)
+{
+    if (dx < 0) dx = -dx;
+    if (dy < 0) dy = -dy;
+
+    int h = (dx > dy) ? dx : dy;
+    int l = (dx > dy) ? dy : dx;
+
+    return h + (l >> 2);
+}
 
 uint8_t calculateFacingDirection(int16_t x1, int16_t y1, int16_t x2, int16_t y2)
 {

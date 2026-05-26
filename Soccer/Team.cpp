@@ -12,9 +12,12 @@ static const int16_t formationPositions[] PROGMEM =
 	0, 32
 };
 
-void Team::init(Person* inPlayers)
+void Team::init(Person* inPlayers, uint8_t inControllerType)
 {
 	players = inPlayers;
+	score = 0;
+	selectedPlayer = nullptr;
+	controllerType = inControllerType;
 }
 
 Person* Team::getClosestPlayer(int16_t x, int16_t y)
@@ -42,10 +45,26 @@ Person* Team::getClosestPlayer(int16_t x, int16_t y)
 #define MAX_FORMATION_OFFSET_Y 64
 #define ATTACK_Y_OFFSET 20
 #define DEFEND_Y_OFFSET -64
+#define GOALIE_ATTACK_Y_OFFSET 128
+#define GOALIE_DEFEND_Y_OFFSET -128
 
 void Team::calculateFormationPosition(uint8_t index, int16_t& outX, int16_t& outY)
 {
 	int multiplier = isTopHalf() ? 1 : -1;
+
+	if (engine.match.state == Match::KickOff)
+	{
+		formationOffsetX = 0;
+
+		if (isTopHalf())
+		{
+			formationOffsetY = -64;
+		}
+		else
+		{
+			formationOffsetY = 64;
+		}
+	}
 
 	if (index >= PLAYERS_PER_TEAM)
 		index -= PLAYERS_PER_TEAM;
@@ -56,6 +75,38 @@ void Team::calculateFormationPosition(uint8_t index, int16_t& outX, int16_t& out
 		outX = BACKGROUND_WIDTH / 2;
 		outY = CENTER_MARK_Y - 125 * multiplier;
 		return;
+	}
+
+	if (engine.match.state == Match::KickOff && engine.match.electedTeam == this)
+	{
+		if (engine.match.electedKicker == &players[index])
+		{
+			if (isTopHalf())
+			{
+				outX = CENTER_MARK_X - 4;
+				outY = CENTER_MARK_Y - 4;
+			}
+			else
+			{
+				outX = CENTER_MARK_X - 4;
+				outY = CENTER_MARK_Y + 4;
+			}
+			return;
+		}
+		else if (index == PLAYERS_PER_TEAM - 2)
+		{
+			if (isTopHalf())
+			{
+				outX = CENTER_MARK_X + 24;
+				outY = CENTER_MARK_Y - 4;
+			}
+			else
+			{
+				outX = CENTER_MARK_X + 24;
+				outY = CENTER_MARK_Y + 4;
+			}
+			return;
+		}
 	}
 
 	index--;
@@ -94,19 +145,41 @@ void Team::update()
 {
 	int multiplier = isTopHalf() ? 1 : -1;
 
+	if (engine.match.state == Match::KickOff)
+	{
+		return;
+	}
+
 	formationOffsetX = engine.ball.x - CENTER_MARK_X;
 	formationOffsetY = engine.ball.y - CENTER_MARK_Y;
 
 	if (engine.ball.owner)
 	{
-		if (&engine.teams[engine.ball.owner->team] == this)
+		int offset = 0;
+		if (engine.ball.owner->isGoalie())
 		{
-			formationOffsetY += ATTACK_Y_OFFSET * multiplier;
+			if (engine.ball.owner->getTeam() == this)
+			{
+				offset = GOALIE_ATTACK_Y_OFFSET;
+			}
+			else
+			{
+				offset = GOALIE_DEFEND_Y_OFFSET;
+			}
 		}
 		else
 		{
-			formationOffsetY += DEFEND_Y_OFFSET * multiplier;
+			if (engine.ball.owner->getTeam() == this)
+			{
+				offset = ATTACK_Y_OFFSET;
+			}
+			else
+			{
+				offset = DEFEND_Y_OFFSET;
+			}
 		}
+
+		formationOffsetY += offset * multiplier;
 	}
 
 	if (formationOffsetX < -MAX_FORMATION_OFFSET_X)
@@ -118,4 +191,36 @@ void Team::update()
 	if (formationOffsetY > MAX_FORMATION_OFFSET_Y)
 		formationOffsetY = MAX_FORMATION_OFFSET_Y;
 
+	if (controllerType != Team::ComputerPlayer)
+	{
+		if (shouldCycleSelectedPlayer || selectedPlayer == nullptr)
+		{
+			calculateCycleSelectedPlayer();
+		}
+	}
+}
+
+void Team::calculateCycleSelectedPlayer()
+{
+	// Find player closest to the ball that isn't the current one
+	Person* closest = nullptr;
+	int closestDistance = 0;
+
+	for (int n = 0; n < PLAYERS_PER_TEAM; n++)
+	{
+		Person& person = players[n];
+		if (selectedPlayer != &person && !person.isGoalie())
+		{
+			int distance = estimateDistance(engine.ball.x, engine.ball.y, person.x, person.y);
+
+			if (closest == nullptr || distance < closestDistance)
+			{
+				closest = &person;
+				closestDistance = distance;
+			}
+		}
+	}
+
+	selectedPlayer = closest;
+	shouldCycleSelectedPlayer = false;
 }

@@ -6,6 +6,8 @@
 #define FXDATA_STREAMING
 
 #if defined (_WIN32)
+
+#define SHOW_FULL_PITCH 0
 //#define STANDARD_FILE_STREAMING
 //#define PROGMEM_MAP_STREAMING
 //#define EMULATE_GAMEBUINO 1
@@ -15,10 +17,13 @@
 
 #if defined(EMULATE_ARDUBOY)
 // Arduboy
+#if SHOW_FULL_PITCH
 #define DISPLAYWIDTH 256
 #define DISPLAYHEIGHT 320
-//#define DISPLAYWIDTH 128
-//#define DISPLAYHEIGHT 64
+#else
+#define DISPLAYWIDTH 128
+#define DISPLAYHEIGHT 64
+#endif
 #endif
 
 #if defined(EMULATE_UZEBOX)
@@ -138,6 +143,8 @@ using uint24_t = __uint24;
 #define PITCH_BOTTOM 287
 #define PITCH_RIGHT 241
 
+#define PENALTY_BOX_WIDTH 138
+#define PENALTY_BOX_HEIGHT 48
 
 #define PERSON_HALF_WIDTH 5
 #define GOALIE_DIVE_FRAMES 21

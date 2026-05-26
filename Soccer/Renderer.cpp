@@ -70,6 +70,13 @@ void Renderer::draw()
 		}
 	}
 
+	// If selected player is off screen, show arrow
+	if (engine.match.shouldAllowKicking())
+	{
+		drawOffScreenArrow(&engine.teams[WHITE_TEAM]);
+		drawOffScreenArrow(&engine.teams[BLACK_TEAM]);
+	}
+
 	if (Platform.readInputDown() & Input_Btn_A)
 	{
 		//showLargeMessage(PSTR("GOAL!"));
@@ -262,7 +269,7 @@ void Renderer::drawPerson(int index)
 	drawBitmap(outX, outY, mask, 16, 16, 0);
 	drawBitmap(outX, outY, sprite, 16, 16, 1);
 
-	if (index == engine.personPlayer1)
+	if (person.isSelectedPlayer() && person.getTeam()->controllerType == Team::LocalPlayer && engine.match.shouldAllowKicking())
 	{
 		drawBitmap(outX + 5, outY - 8, selectionArrowSpriteMask, 8, 8, 0);
 		drawBitmap(outX + 5, outY - 8, selectionArrowSprite, 8, 8, 1);
@@ -293,3 +300,36 @@ void Renderer::drawText(const char* text, int16_t x, int16_t y, uint8_t colour)
 	}
 }
 
+void Renderer::drawOffScreenArrow(Team* team)
+{
+	if (team->controllerType == Team::LocalPlayer && team->selectedPlayer && !team->selectedPlayer->isOnScreen())
+	{
+		int offset = 0;
+		int outX = team->selectedPlayer->x - engine.camera.x - 4;
+		int outY = team->selectedPlayer->y - engine.camera.y - 10;
+
+		if (outX < 0)
+		{
+			outX = 0;
+			offset = 8 * 4;
+		}
+		if (outX > DISPLAYWIDTH - 8)
+		{
+			outX = DISPLAYWIDTH - 8;
+			offset = 8 * 2;
+		}
+		if (outY < 0)
+		{
+			outY = 0;
+			offset = 8 * 1;
+		}
+		if (outY > DISPLAYHEIGHT - 8)
+		{
+			outY = DISPLAYHEIGHT - 8;
+			offset = 8 * 3;
+		}
+
+		drawBitmap(outX, outY, selectionArrowSpriteMask + offset, 8, 8, 0);
+		drawBitmap(outX, outY, selectionArrowSprite + offset, 8, 8, 1);
+	}
+}

@@ -3,6 +3,8 @@
 
 #include "Defines.h"
 
+class Team;
+
 class Person
 {
 public:
@@ -34,9 +36,17 @@ public:
 	void stun(uint8_t frames, bool shouldFall = false);
 	void kickBall(int velocityX, int velocityY, int velocityZ);
 	void goalieDive();
+	void tryPass();
+	void tryShoot();
+	Team* getTeam();
+	void takeBall();
 
+	bool isSelectedPlayer();
+	bool isHoldingBall() { return isGoalie() && hasBall() && isInOwnPenaltyBox(); }
+	bool hasBall();
 	bool isOnScreen();
 	bool isGoalie() { return index == 0 || index == PLAYERS_PER_TEAM; }
+	bool isInOwnPenaltyBox();
 
 	static void getDirectionOffset(uint8_t direction, int8_t& dx, int8_t& dy);
 
