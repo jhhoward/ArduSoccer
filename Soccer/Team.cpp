@@ -138,7 +138,7 @@ void Team::calculateFormationPosition(uint8_t index, int16_t& outX, int16_t& out
 
 bool Team::isTopHalf()
 {
-	return this == &engine.teams[0];
+	return this != &engine.teams[engine.match.matchHalf];
 }
 
 void Team::update()

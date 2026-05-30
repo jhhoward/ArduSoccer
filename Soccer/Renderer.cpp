@@ -1,8 +1,11 @@
 #include <stdint.h>
+#include <string.h>
 #include "Engine.h"
 #include "Renderer.h"
 #include "Generated/Pitch.inc.h"
 
+const Font smallFont PROGMEM = { smallFontData, 6, 8, 6, 6 };
+const Font largeFont PROGMEM = { largeFontData, 16, 16, 15, 6 };
 
 Renderer::Renderer() 
 {
@@ -107,11 +110,26 @@ void Renderer::draw()
 
 		if (showText)
 		{
-			drawText(largeMessage, largeMessageX, DISPLAYHEIGHT / 2 - 7, 1);
+			if (largeMessage)
+			{
+				drawText(largeFont, largeMessage, largeMessageX, DISPLAYHEIGHT / 2 - 7, 1);
+			}
+			else
+			{
+				drawText(largeFont, engine.match.scoreText, largeMessageX, DISPLAYHEIGHT / 2 - 7, 1, true);
+			}
 		}
 
 		largeMessageCounter--;
 	}
+
+	fillRect(0, 0, (strlen(engine.match.scoreText) + 1) * 6, 8, 0);
+	drawText(smallFont, engine.match.scoreText, 3, 0, 1, true);
+
+	char* matchTimerText = engine.match.getMatchTimeString();
+	int matchTimerTextWidth = (strlen(matchTimerText) + 1) * 6;
+	fillRect(DISPLAYWIDTH - matchTimerTextWidth, 0, matchTimerTextWidth, 8, 0);
+	drawText(smallFont, matchTimerText, DISPLAYWIDTH - matchTimerTextWidth + 3, 0, 1, true);
 }
 
 void Renderer::showLargeMessage(const char* message)
@@ -119,16 +137,29 @@ void Renderer::showLargeMessage(const char* message)
 	int messageLength = 0;
 
 	const char* ptr = message;
-	while (1)
+
+	if (ptr)
 	{
-		char c = pgm_read_byte(ptr);
-		ptr++;
-		if (!c)
-			break;
-		if (c == ' ')
-			messageLength += 6;
-		else
-			messageLength += 15;
+		while (1)
+		{
+			char c = pgm_read_byte(ptr);
+			ptr++;
+			if (!c)
+				break;
+			if (c == ' ')
+				messageLength += pgm_read_byte(&largeFont.spaceWidth);
+			else
+				messageLength += pgm_read_byte(&largeFont.spacing);
+		}
+	}
+	else
+	{
+		// Showing score
+		ptr = engine.match.scoreText;
+		while (*ptr++)
+		{
+			messageLength += pgm_read_byte(&largeFont.spacing);
+		}
 	}
 
 	largeMessageX = HALF_DISPLAYWIDTH - messageLength / 2;
@@ -276,11 +307,24 @@ void Renderer::drawPerson(int index)
 	}
 }
 
-void Renderer::drawText(const char* text, int16_t x, int16_t y, uint8_t colour)
+void Renderer::drawText(const Font& font, const char* text, int16_t x, int16_t y, uint8_t colour, bool isRAMString)
 {
+	const uint8_t* fontData = (const uint8_t*) pgm_read_ptr(&font.fontData);
+	uint8_t glyphWidth = pgm_read_byte(&font.width);
+	uint8_t glyphHeight = pgm_read_byte(&font.height);
+	uint8_t spaceWidth = pgm_read_byte(&font.spaceWidth);
+	uint8_t spacing = pgm_read_byte(&font.spacing);
+	int pitch = (glyphWidth * glyphHeight) >> 3;
+
 	while (1)
 	{
-		char c = pgm_read_byte(text);
+		char c;
+		
+		if (isRAMString)
+			c = *text;
+		else
+			c = pgm_read_byte(text);
+
 		if (!c)
 			break;
 		text++;
@@ -289,13 +333,13 @@ void Renderer::drawText(const char* text, int16_t x, int16_t y, uint8_t colour)
 
 		if (index == 0)
 		{
-			x += 6;
+			x += spaceWidth;
 		}
 		else
 		{
-			const uint8_t* data = largeFontData + (32 * index);
-			drawBitmap(x, y, data, 16, 16, colour);
-			x += 15;
+			const uint8_t* data = fontData + (pitch * index);
+			drawBitmap(x, y, data, glyphWidth, glyphHeight, colour);
+			x += spacing;
 		}
 	}
 }

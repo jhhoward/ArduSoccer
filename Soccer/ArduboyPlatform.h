@@ -1,7 +1,7 @@
 #pragma once
 
 #include <avr/pgmspace.h>
-#include <ArduboyFX.h>      
+#include <Arduboy2.h>      
 
 #include "Platform.h"
 

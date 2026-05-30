@@ -12,6 +12,12 @@ enum
 	NUM_DRAWABLES
 };
 
+struct Font
+{
+	const uint8_t* fontData;
+	const uint8_t width, height, spacing, spaceWidth;
+};
+
 class Renderer
 {
 public:
@@ -29,7 +35,7 @@ public:
 	void showLargeMessage(const char* message);
 	bool isShowingLargeMessage() { return largeMessageCounter > 0; }
 
-	void drawText(const char* text, int16_t x, int16_t y, uint8_t colour);
+	void drawText(const Font& font, const char* text, int16_t x, int16_t y, uint8_t colour, bool isRAMString = false);
 
 	uint8_t drawOrder[NUM_DRAWABLES];
 

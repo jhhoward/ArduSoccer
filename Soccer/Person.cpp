@@ -212,7 +212,7 @@ bool Person::isOnScreen()
 
 void Person::kickBall(int velocityX, int velocityY, int velocityZ)
 {
-	engine.ball.owner = NULL;
+	engine.ball.setOwner(nullptr);
 	engine.ball.velocityX = velocityX;
 	engine.ball.velocityY = velocityY;
 	engine.ball.velocityZ = velocityZ;
@@ -305,74 +305,139 @@ void Person::update()
 				inputDirection = NoDirection;
 			}
 		}
-
-		if (!isSelectedPlayer() && team != REFEREE_TEAM)
+		else 
 		{
-			// Follow formation
-			{
-				int16_t targetX, targetY;
-				getTeam()->calculateFormationPosition(index, targetX, targetY);
-				int formationLooseness = 16;
+			// General player AI
 
-				if (isGoalie() || estimateDistance(x, y, targetX, targetY) > formationLooseness)
-				{
-					inputDirection = calculateFacingDirection(x, y, targetX, targetY);
-				}
-				//int16_t targetX = pgm_read_word(&startingPositions[index * 2]);
-				//int16_t targetY = pgm_read_word(&startingPositions[index * 2 + 1]);
-			}
-
-			if (hasBall())
+			// Celebration behaviour if scoring a goal
+			if (engine.match.state == Match::Scored)
 			{
-				if (isGoalie())
+				if (getTeam() == engine.match.electedTeam && engine.match.electedKicker)
 				{
-					uint8_t targetDirection = team ? North : South;
-					if (direction == targetDirection && engine.ball.ownerTimer > 32)
+					/*int8_t offsetX, offsetY;
+					getDirectionOffset(index & 7, offsetX, offsetY);
+					int celebrationX = PITCH_RIGHT;
+					int celebrationY = getTeam()->isTopHalf() ? PITCH_TOP : PITCH_BOTTOM;
+					celebrationX += offsetX * 16;
+					celebrationY += offsetY * 16;
+
+					if (engine.match.electedKicker != this)
 					{
-						input |= Input_Btn_A;
+						celebrationX = (celebrationX + engine.match.electedKicker->x) >> 1;
+						celebrationY = (celebrationY + engine.match.electedKicker->y) >> 1;
 					}
-					
-					if (direction != targetDirection)
+
+					inputDirection = calculateFacingDirection(x, y, celebrationX, celebrationY);
+
+					*/
+
+					if (engine.match.electedKicker == this)
 					{
-						inputDirection = targetDirection;
+						if (getTeam()->isTopHalf())
+						{
+							inputDirection = calculateFacingDirection(x, y, PITCH_RIGHT, PITCH_TOP);
+						}
+						else
+						{
+							inputDirection = calculateFacingDirection(x, y, PITCH_RIGHT, PITCH_BOTTOM);
+						}
+					}
+					else
+					{
+						inputDirection = calculateFacingDirection(x, y, engine.match.electedKicker->x, engine.match.electedKicker->y);
+
+						if (estimateDistance(x, y, engine.match.electedKicker->x, engine.match.electedKicker->y) < 32)
+						{
+							inputDirection = NoDirection;
+						}
 					}
 				}
 				else
 				{
-					int goalX = BACKGROUND_WIDTH / 2;
-					int goalY = getTeam()->isTopHalf() ? PITCH_BOTTOM : PITCH_TOP;
-
-					inputDirection = calculateFacingDirection(x, y, goalX, goalY);
-
-					if (estimateDistance(x, y, goalX, goalY) < 48)
-					{
-						input |= Input_Btn_B;
-					}
-
-					if (engine.ball.ownerTimer > 60)
-					{
-						input |= Input_Btn_A;
-					}
+					inputDirection = NoDirection;
 				}
 			}
 			else
 			{
-				bool shouldChaseBall = engine.match.shouldAllowFreeMovement();
-
-				if (shouldChaseBall && (!engine.ball.owner || !engine.ball.owner->isHoldingBall()))
+				if (!isSelectedPlayer())
 				{
-					if (getTeam()->getClosestPlayer(engine.ball.x, engine.ball.y) == this)
+					// Follow formation
 					{
-						inputDirection = calculateFacingDirection(x, y, engine.ball.x, engine.ball.y);
+						int16_t targetX, targetY;
+						getTeam()->calculateFormationPosition(index, targetX, targetY);
+						int formationLooseness = 16;
 
-						if (engine.ball.owner && engine.ball.owner->team != team)
+						if (isGoalie() || estimateDistance(x, y, targetX, targetY) > formationLooseness)
 						{
-							bool autoSlideTackle = true;
+							inputDirection = calculateFacingDirection(x, y, targetX, targetY);
+						}
+						//int16_t targetX = pgm_read_word(&startingPositions[index * 2]);
+						//int16_t targetY = pgm_read_word(&startingPositions[index * 2 + 1]);
+					}
 
-							if (estimateDistance(x, y, engine.ball.x, engine.ball.y) < 10 && (autoSlideTackle || team != 0 || isGoalie()))
+					if (hasBall())
+					{
+						if (engine.match.shouldAllowFreeMovement())
+						{
+							if (isGoalie())
 							{
-								// Slide tackle opponent
-								input |= Input_Btn_B;
+								uint8_t targetDirection = getTeam()->isTopHalf() ? South : North;
+								if (direction == targetDirection && engine.ball.ownerTimer > 32)
+								{
+									input |= Input_Btn_A;
+								}
+
+								if (direction != targetDirection)
+								{
+									inputDirection = targetDirection;
+								}
+							}
+							else
+							{
+								int goalX = BACKGROUND_WIDTH / 2;
+								int goalY = getTeam()->isTopHalf() ? PITCH_BOTTOM : PITCH_TOP;
+
+								inputDirection = calculateFacingDirection(x, y, goalX, goalY);
+
+								if (estimateDistance(x, y, goalX, goalY) < 48)
+								{
+									input |= Input_Btn_B;
+								}
+
+								if (engine.ball.ownerTimer > 60)
+								{
+									input |= Input_Btn_A;
+								}
+							}
+						}
+						else
+						{
+							if (engine.ball.ownerTimer > 60)
+							{
+								input |= Input_Btn_A;
+							}
+						}
+					}
+					else
+					{
+						bool shouldChaseBall = engine.match.shouldAllowFreeMovement();
+
+						if (shouldChaseBall && (!engine.ball.owner || !engine.ball.owner->isHoldingBall()))
+						{
+							if (getTeam()->getClosestPlayer(engine.ball.x, engine.ball.y) == this)
+							{
+								inputDirection = calculateFacingDirection(x, y, engine.ball.x, engine.ball.y);
+
+								if (engine.ball.owner && engine.ball.owner->team != team)
+								{
+									bool autoSlideTackle = true;
+
+									if (estimateDistance(x, y, engine.ball.x, engine.ball.y) < 10 && (autoSlideTackle || team != 0 || isGoalie()))
+									{
+										// Slide tackle opponent
+										input |= Input_Btn_B;
+									}
+								}
 							}
 						}
 					}
@@ -635,65 +700,68 @@ void Person::update()
 
 	if (hasBall())
 	{
-		int8_t deltaX, deltaY;
-		getDirectionOffset(direction, deltaX, deltaY);
-
-		if (state == Person::DiveRight)
+		if (getTeam()->controllerType != Team::ComputerPlayer)
 		{
-			// Saving during a dive
-			engine.ball.setPosition(x + 2, y + deltaY, z + 3);
+			getTeam()->selectedPlayer = this;
 		}
-		else if (state == Person::DiveLeft)
-		{
-			// Saving during a dive
-			engine.ball.setPosition(x - 2, y + deltaY, z + 3);
-		}
-		else
-		{
-			// Dribbling the ball
-			int ballZ = engine.ball.z;
 
-			if (isHoldingBall())
+		if (engine.match.shouldAllowFreeMovement())
+		{
+			int8_t deltaX, deltaY;
+			getDirectionOffset(direction, deltaX, deltaY);
+
+			if (state == Person::DiveRight)
 			{
-				// Goalie Holding ball in hands
-				ballZ = z + 4;
-				deltaX *= 5;
-				deltaY *= 2;
+				// Saving during a dive
+				engine.ball.setPosition(x + 2, y + deltaY, z + 3);
+			}
+			else if (state == Person::DiveLeft)
+			{
+				// Saving during a dive
+				engine.ball.setPosition(x - 2, y + deltaY, z + 3);
 			}
 			else
 			{
-				// Dribbling on floor
-				deltaX *= 6;
-				deltaY *= 4;
+				// Dribbling the ball
+				int ballZ = engine.ball.z;
 
-				if (deltaX == 0 && deltaY < 0)
+				if (isHoldingBall())
 				{
-					if (x < BACKGROUND_WIDTH / 2)
+					// Goalie Holding ball in hands
+					ballZ = z + 4;
+					deltaX *= 5;
+					deltaY *= 2;
+				}
+				else
+				{
+					// Dribbling on floor
+					deltaX *= 6;
+					deltaY *= 4;
+
+					if (deltaX == 0 && deltaY < 0)
 					{
-						deltaX = 5;
-					}
-					else
-					{
-						deltaX = -5;
+						if (x < BACKGROUND_WIDTH / 2)
+						{
+							deltaX = 5;
+						}
+						else
+						{
+							deltaX = -5;
+						}
 					}
 				}
+
+				if (ballDeltaX < deltaX)
+					ballDeltaX++;
+				else if (ballDeltaX > deltaX)
+					ballDeltaX--;
+				if (ballDeltaY < deltaY)
+					ballDeltaY++;
+				else if (ballDeltaY > deltaY)
+					ballDeltaY--;
+
+				engine.ball.setPosition(x + ballDeltaX, y + ballDeltaY, ballZ);
 			}
-
-			if (ballDeltaX < deltaX)
-				ballDeltaX++;
-			else if (ballDeltaX > deltaX)
-				ballDeltaX--;
-			if (ballDeltaY < deltaY)
-				ballDeltaY++;
-			else if (ballDeltaY > deltaY)
-				ballDeltaY--;
-
-			if (getTeam()->controllerType != Team::ComputerPlayer)
-			{
-				getTeam()->selectedPlayer = this;
-			}
-
-			engine.ball.setPosition(x + ballDeltaX, y + ballDeltaY, ballZ);
 		}
 	}
 }
@@ -959,8 +1027,7 @@ void Person::takeBall()
 {
 	int diffX = engine.ball.x - x;
 	int diffY = engine.ball.y - y;
-	engine.ball.owner = this;
-	engine.ball.ownerTimer = 0;
+	engine.ball.setOwner(this);
 	ballDeltaX = diffX;
 	ballDeltaY = diffY;
 }

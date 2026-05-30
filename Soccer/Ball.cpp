@@ -228,3 +228,22 @@ bool Ball::isInsideBottomNet()
 {
 	return fixedX >= ITOFIX(GOAL_NET_X1) && fixedX <= ITOFIX(GOAL_NET_X2) && fixedY >= ITOFIX(BOTTOM_GOAL_NET_Y1) && fixedY <= ITOFIX(BOTTOM_GOAL_NET_Y2) && fixedZ <= ITOFIX(GOAL_BAR_Z1);
 }
+
+void Ball::setOwner(class Person* newOwner)
+{
+	if (newOwner)
+	{
+		owner = newOwner;
+		lastOwner = nullptr;
+	}
+	else
+	{
+		if (owner)
+		{
+			lastOwner = owner;
+			owner = nullptr;
+		}
+	}
+
+	ownerTimer = 0;
+}

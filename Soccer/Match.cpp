@@ -8,9 +8,57 @@ void Match::reset()
 		engine.people[n].init(n);
 	}
 
+	matchTimer = 0;
+	matchHalf = 0;
 	setupKickOff(&engine.teams[WHITE_TEAM]);
 	engine.renderer.showLargeMessage(PSTR("KICK OFF!"));
 	engine.setCameraFocus(CENTER_MARK_X, CENTER_MARK_Y);
+	regenerateScoreText();
+}
+
+void Match::onGoalScored(Team* team)
+{
+	team->score++;
+	setState(Match::Scored);
+	electedTeam = team;
+	
+	if (engine.ball.lastOwner && engine.ball.lastOwner->getTeam() == team)
+	{
+		electedKicker = engine.ball.lastOwner;
+	}
+
+	regenerateScoreText();
+	engine.renderer.showLargeMessage(PSTR("GOAL!"));
+}
+
+void Match::onHalfTime()
+{
+	setState(Match::HalfTime);
+	engine.renderer.showLargeMessage(PSTR("HALF TIME"));
+	matchHalf = SECOND_HALF;
+}
+
+void Match::onMatchEnd()
+{
+	setState(Match::MatchEnd);
+
+	if (engine.teams[0].score == engine.teams[1].score)
+	{
+		engine.renderer.showLargeMessage(PSTR("DRAW!"));
+	}
+	else
+	{
+		int winningTeam = engine.teams[0].score < engine.teams[1].score ? 1 : 0;
+
+		if (engine.teams[winningTeam].controllerType == Team::LocalPlayer)
+		{
+			engine.renderer.showLargeMessage(PSTR("YOU WIN!"));
+		}
+		else
+		{
+			engine.renderer.showLargeMessage(PSTR("YOU LOSE!"));
+		}
+	}
 }
 
 void Match::update()
@@ -18,38 +66,72 @@ void Match::update()
 	switch(state)
 	{
 	case Match::Playing:
-		if (engine.ball.isInsideTopNet())
+		if (!engine.ball.owner || !engine.ball.owner->isHoldingBall())
 		{
-			if (engine.teams[WHITE_TEAM].isTopHalf())
+			if (engine.ball.isInsideTopNet())
 			{
-				engine.teams[BLACK_TEAM].score++;
+				if (engine.teams[WHITE_TEAM].isTopHalf())
+				{
+					onGoalScored(&engine.teams[BLACK_TEAM]);
+				}
+				else
+				{
+					onGoalScored(&engine.teams[WHITE_TEAM]);
+				}
 			}
-			else
+			if (engine.ball.isInsideBottomNet())
 			{
-				engine.teams[WHITE_TEAM].score++;
+				if (engine.teams[WHITE_TEAM].isTopHalf())
+				{
+					onGoalScored(&engine.teams[WHITE_TEAM]);
+				}
+				else
+				{
+					onGoalScored(&engine.teams[BLACK_TEAM]);
+				}
 			}
-			setState(Match::Scored);
-			engine.renderer.showLargeMessage(PSTR("GOAL!"));
 		}
-		if (engine.ball.isInsideBottomNet())
+		matchTimer++;
+
+		if (matchHalf == FIRST_HALF && matchTimer > engine.settings.matchHalfLength * 60 * TARGET_FRAMERATE)
 		{
-			if (engine.teams[WHITE_TEAM].isTopHalf())
-			{
-				engine.teams[WHITE_TEAM].score++;
-			}
-			else
-			{
-				engine.teams[BLACK_TEAM].score++;
-			}
-			setState(Match::Scored);
-			engine.renderer.showLargeMessage(PSTR("GOAL!"));
+			onHalfTime();
 		}
+		if (matchHalf == SECOND_HALF && matchTimer > engine.settings.matchHalfLength * 60 * TARGET_FRAMERATE * 2)
+		{
+			onMatchEnd();
+		}
+
 		break;
 
 	case Match::Scored:
 		if (timeInState > 60 * 3)
 		{
-			setupKickOff(&engine.teams[WHITE_TEAM]);
+			if (electedTeam == &engine.teams[WHITE_TEAM])
+			{
+				setupKickOff(&engine.teams[BLACK_TEAM]);
+			}
+			else
+			{
+				setupKickOff(&engine.teams[WHITE_TEAM]);
+			}
+			
+			engine.renderer.showLargeMessage(nullptr);
+		}
+		break;
+
+	case Match::HalfTime:
+		if (timeInState > 60 * 3)
+		{
+			setupKickOff(&engine.teams[BLACK_TEAM]);
+			engine.renderer.showLargeMessage(PSTR("2ND HALF"));
+		}
+		break;
+
+	case Match::MatchEnd:
+		if (timeInState > 60 * 3)
+		{
+			reset();
 		}
 		break;
 	}
@@ -63,6 +145,7 @@ void Match::setState(Match::State newState)
 	timeInState = 0;
 	electedKicker = nullptr;
 	electedTeam = nullptr;
+	engine.ball.setOwner(nullptr);
 }
 
 bool Match::shouldAllowFreeMovement()
@@ -94,6 +177,8 @@ void Match::onKick()
 	default:
 		setState(Match::Playing);
 		break;
+	case Match::Playing:
+		break;
 	}
 }
 
@@ -116,4 +201,45 @@ void Match::setupKickOff(Team* team)
 	}
 
 	electedKicker->takeBall();
+}
+
+void Match::regenerateScoreText()
+{
+	char* ptr = scoreText;
+
+	ptr = printInt(ptr, engine.teams[0].score);
+	*ptr++ = '-';
+	ptr = printInt(ptr, engine.teams[1].score);
+}
+
+char* Match::printInt(char* buffer, uint8_t number, bool leadingZeroes)
+{
+	if (number > 99)
+	{
+		number = 99;
+	}
+	if (number >= 10 || leadingZeroes)
+	{
+		int tens = number / 10;
+		*buffer++ = '0' + tens;
+		number -= tens * 10;
+	}
+	*buffer++ = '0' + number;
+
+	return buffer;
+}
+
+char* Match::getMatchTimeString()
+{
+	int totalSeconds = matchTimer / TARGET_FRAMERATE;
+	int minutes = totalSeconds / 60;
+	int seconds = totalSeconds - minutes * 60;
+
+	static char buffer[6];
+	char* ptr = buffer;
+	ptr = printInt(ptr, minutes);
+	*ptr++ = ':';
+	ptr = printInt(ptr, seconds, true);
+
+	return buffer;
 }

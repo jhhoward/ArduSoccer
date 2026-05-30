@@ -16,7 +16,10 @@ public:
 	int16_t fixedX, fixedY, fixedZ;
 	int16_t velocityX, velocityY, velocityZ;
 
+	void setOwner(class Person* newOwner);
+
 	class Person* owner;
+	class Person* lastOwner;
 	uint16_t ownerTimer;
 
 	bool isInsideTopNet();

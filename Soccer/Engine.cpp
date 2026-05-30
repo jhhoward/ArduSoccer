@@ -10,6 +10,7 @@ void Engine::init()
 	teams[WHITE_TEAM].init(people, Team::LocalPlayer);
 	teams[BLACK_TEAM].init(people + PLAYERS_PER_TEAM, Team::ComputerPlayer);
 
+	settings.matchHalfLength = 2;
 	match.reset();
 }
 
@@ -49,6 +50,12 @@ void Engine::updateCamera()
 
 	targetCameraX = ball.x;
 	targetCameraY = ball.y;
+
+	if (match.state == Match::Scored && match.electedKicker && match.timeInState > 30)
+	{
+		targetCameraX = match.electedKicker->x;
+		targetCameraY = match.electedKicker->y;
+	}
 
 	int targetCameraOffsetX = 0, targetCameraOffsetY = 0;
 

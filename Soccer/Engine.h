@@ -26,6 +26,11 @@ struct Camera
 	int offsetX, offsetY;
 };
 
+struct GameSettings
+{
+	uint8_t matchHalfLength;
+};
+
 class Engine
 {
 public:
@@ -44,6 +49,7 @@ public:
 	Ball ball;
 	Match match;
 	Team teams[2];
+	GameSettings settings;
 
 private:
 	void updateCamera();
