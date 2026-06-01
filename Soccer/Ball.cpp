@@ -234,7 +234,7 @@ void Ball::setOwner(class Person* newOwner)
 	if (newOwner)
 	{
 		owner = newOwner;
-		lastOwner = nullptr;
+		lastOwner = newOwner;
 	}
 	else
 	{

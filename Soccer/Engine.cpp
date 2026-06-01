@@ -5,15 +5,42 @@ Engine engine;
 
 void Engine::init()
 {
-	gameState = GameState_Playing;
-
-	teams[WHITE_TEAM].init(people, Team::LocalPlayer);
-	teams[BLACK_TEAM].init(people + PLAYERS_PER_TEAM, Team::ComputerPlayer);
+	menu.init();
+	gameState = GameState_Menu;
 
 	settings.matchHalfLength = 2;
-	match.reset();
 }
 
+void Engine::startMultiplayer(bool isHost)
+{
+	Platform.connectMultiplayer(true);
+
+	teams[WHITE_TEAM].init(people, isHost ? Team::LocalPlayer : Team::RemotePlayer);
+	teams[BLACK_TEAM].init(people + PLAYERS_PER_TEAM, isHost ? Team::RemotePlayer : Team::LocalPlayer);
+	match.reset();
+	gameState = GameState_Playing;
+}
+
+void Engine::startSinglePlayer()
+{
+	teams[WHITE_TEAM].init(people, Team::LocalPlayer); 
+	teams[BLACK_TEAM].init(people + PLAYERS_PER_TEAM, Team::ComputerPlayer);
+	match.reset();
+	gameState = GameState_Playing;
+}
+
+void Engine::startDemo()
+{
+	teams[WHITE_TEAM].init(people, Team::ComputerPlayer);
+	teams[BLACK_TEAM].init(people + PLAYERS_PER_TEAM, Team::ComputerPlayer);
+	match.reset();
+	gameState = GameState_Playing;
+}
+
+bool Engine::isDemo()
+{
+	return teams[WHITE_TEAM].controllerType == Team::ComputerPlayer;
+}
 
 void Engine::update()
 {
@@ -33,10 +60,17 @@ void Engine::update()
 			teams[BLACK_TEAM].update();
 
 			updateCamera();
+
+			// Check for exiting demo mode
+			if (isDemo() && (Platform.readInput() & Input_Btn_A))
+			{
+				gameState = GameState_Menu;
+			}
 		}
 		break;
 	case GameState_Menu:
 		{
+			menu.update();
 		}
 		break;
 	}
@@ -166,6 +200,13 @@ void Engine::setCameraFocus(int focusX, int focusY)
 
 void Engine::draw()
 {
-	renderer.draw();
+	if (gameState == GameState_Menu)
+	{
+		menu.draw();
+	}
+	else
+	{
+		renderer.draw();
+	}
 }
 

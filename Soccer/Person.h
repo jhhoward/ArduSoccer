@@ -52,6 +52,7 @@ public:
 
 	bool tryMove(int deltaX, int deltaY);
 	bool isColliding();
+	uint8_t getAvoidDirection(uint8_t dir);
 
 	static int8_t ballDeltaX, ballDeltaY;
 };

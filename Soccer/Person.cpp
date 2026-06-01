@@ -249,7 +249,11 @@ void Person::update()
 		{
 			if (getTeam()->controllerType == Team::LocalPlayer)
 			{
-				input = Platform.readInput();
+				input = Platform.readInput(LOCAL_PLAYER);
+			}
+			else if (getTeam()->controllerType == Team::RemotePlayer)
+			{
+				input = Platform.readInput(REMOTE_PLAYER);
 			}
 
 			if (!engine.match.shouldAllowFreeMovement())
@@ -280,7 +284,7 @@ void Person::update()
 					}
 				}
 
-				if (swapBecauseOffScreen || (Platform.readInputDown() & Input_Btn_A))
+				if (swapBecauseOffScreen || (input & Input_Btn_A))
 				{
 					// Swap selected player if pressing A or off screen
 					getTeam()->cycleSelectedPlayer();
@@ -345,6 +349,7 @@ void Person::update()
 					else
 					{
 						inputDirection = calculateFacingDirection(x, y, engine.match.electedKicker->x, engine.match.electedKicker->y);
+						inputDirection = getAvoidDirection(inputDirection);
 
 						if (estimateDistance(x, y, engine.match.electedKicker->x, engine.match.electedKicker->y) < 32)
 						{
@@ -399,6 +404,8 @@ void Person::update()
 
 								inputDirection = calculateFacingDirection(x, y, goalX, goalY);
 
+								inputDirection = getAvoidDirection(inputDirection);
+
 								if (estimateDistance(x, y, goalX, goalY) < 48)
 								{
 									input |= Input_Btn_B;
@@ -424,15 +431,18 @@ void Person::update()
 
 						if (shouldChaseBall && (!engine.ball.owner || !engine.ball.owner->isHoldingBall()))
 						{
-							if (getTeam()->getClosestPlayer(engine.ball.x, engine.ball.y) == this)
+							int estimatedBallDistance = estimateDistance(x, y, engine.ball.x, engine.ball.y);
+							bool otherTeamHasBall = engine.ball.owner && engine.ball.owner->team != team;
+
+							if (getTeam()->getClosestPlayer(engine.ball.x, engine.ball.y) == this || (estimatedBallDistance < 40 && otherTeamHasBall))
 							{
 								inputDirection = calculateFacingDirection(x, y, engine.ball.x, engine.ball.y);
 
-								if (engine.ball.owner && engine.ball.owner->team != team)
+								if (otherTeamHasBall)
 								{
-									bool autoSlideTackle = true;
+									bool autoSlideTackle = engine.ball.ownerTimer > 15;
 
-									if (estimateDistance(x, y, engine.ball.x, engine.ball.y) < 10 && (autoSlideTackle || team != 0 || isGoalie()))
+									if (estimatedBallDistance < 10 && (autoSlideTackle || isGoalie()))
 									{
 										// Slide tackle opponent
 										input |= Input_Btn_B;
@@ -650,7 +660,7 @@ void Person::update()
 			}
 
 			animationFrame++;
-			if (animationFrame >= SLIDE_TACKLE_FRAMES)
+			if (animationFrame >= SLIDE_TACKLE_FRAMES || (hasBall() && engine.ball.ownerTimer > SLIDE_TACKLE_FRAMES / 2))
 			{
 				state = Person::Standing;
 				animationFrame = 0;
@@ -905,7 +915,7 @@ void Person::tryShoot()
 	// Check if we are facing the right direction
 	uint8_t goalDirection = calculateFacingDirection(x, y, goalX, goalY);
 
-	if (direction == goalDirection)
+	if (direction == goalDirection || 1)
 	{
 		// Just kick in the facing direction
 		int8_t deltaX = ((int8_t)pgm_read_byte(&directionToX[direction]));
@@ -1056,4 +1066,67 @@ bool Person::hasBall()
 bool Person::isSelectedPlayer()
 {
 	return team != REFEREE_TEAM && getTeam()->selectedPlayer == this;
+}
+
+uint8_t Person::getAvoidDirection(uint8_t dir)
+{
+	int8_t offsetX, offsetY;
+	int checkX, checkY;
+
+	/*for (int n = 0; n < PLAYERS_PER_TEAM * 2; n++)
+	{
+		Person& other = engine.people[n];
+
+		if (this != &other)
+		{
+			if (estimateDistance(x, y, other.x, other.y) < 16)
+			{
+				uint8_t awayDirection = calculateFacingDirection(other.x, other.y, x, y);
+				getDirectionOffset(awayDirection, offsetX, offsetY);
+				checkX = x + offsetX * 16;
+				checkY = y + offsetY * 16;
+
+				if (checkX > PITCH_LEFT + 32 && checkX < PITCH_RIGHT - 32 && checkY > PITCH_TOP + 32 && checkY < PITCH_BOTTOM - 32)
+				{
+					return awayDirection;
+				}
+			}
+		}
+	}
+	*/
+	bool needAvoid = false;
+
+	getDirectionOffset(dir, offsetX, offsetY);
+	checkX = x + offsetX * 16;
+	checkY = y + offsetY * 16;
+
+	for (int n = 0; n < PLAYERS_PER_TEAM * 2; n++)
+	{
+		Person& other = engine.people[n];
+
+		if (this != &other)
+		{
+			if (estimateDistance(checkX, checkY, other.x, other.y) < 16)
+			{
+				needAvoid = true;
+				break;
+			}
+		}
+	}
+
+	if (!needAvoid)
+	{
+		return dir;
+	}
+
+	if (index & 1)
+	{
+		dir = (dir + 1) & 7;
+	}
+	else
+	{
+		dir = (dir - 1) & 7;
+	}
+
+	return dir;
 }

@@ -8,9 +8,13 @@ void Match::reset()
 		engine.people[n].init(n);
 	}
 
+	engine.teams[WHITE_TEAM].score = 0;
+	engine.teams[BLACK_TEAM].score = 0;
 	matchTimer = 0;
 	matchHalf = 0;
 	setupKickOff(&engine.teams[WHITE_TEAM]);
+	//setupCorner(&engine.teams[WHITE_TEAM]);
+
 	engine.renderer.showLargeMessage(PSTR("KICK OFF!"));
 	engine.setCameraFocus(CENTER_MARK_X, CENTER_MARK_Y);
 	regenerateScoreText();
@@ -79,7 +83,7 @@ void Match::update()
 					onGoalScored(&engine.teams[WHITE_TEAM]);
 				}
 			}
-			if (engine.ball.isInsideBottomNet())
+			else if (engine.ball.isInsideBottomNet())
 			{
 				if (engine.teams[WHITE_TEAM].isTopHalf())
 				{
@@ -88,6 +92,28 @@ void Match::update()
 				else
 				{
 					onGoalScored(&engine.teams[BLACK_TEAM]);
+				}
+			}
+			else if (engine.ball.y < PITCH_TOP)
+			{
+				if (engine.ball.lastOwner && engine.ball.lastOwner->getTeam() == getTeamAtTopHalf())
+				{
+					queueState(Match::Corner, getTeamAtBottomHalf());
+				}
+				else
+				{
+					queueState(Match::GoalKick, getTeamAtTopHalf());
+				}
+			}
+			else if (engine.ball.y > PITCH_BOTTOM)
+			{
+				if (engine.ball.lastOwner && engine.ball.lastOwner->getTeam() == getTeamAtBottomHalf())
+				{
+					queueState(Match::Corner, getTeamAtTopHalf());
+				}
+				else
+				{
+					queueState(Match::GoalKick, getTeamAtBottomHalf());
 				}
 			}
 		}
@@ -105,7 +131,7 @@ void Match::update()
 		break;
 
 	case Match::Scored:
-		if (timeInState > 60 * 3)
+		if (timeInState > 30 * 5)
 		{
 			if (electedTeam == &engine.teams[WHITE_TEAM])
 			{
@@ -121,7 +147,7 @@ void Match::update()
 		break;
 
 	case Match::HalfTime:
-		if (timeInState > 60 * 3)
+		if (timeInState > 30 * 5)
 		{
 			setupKickOff(&engine.teams[BLACK_TEAM]);
 			engine.renderer.showLargeMessage(PSTR("2ND HALF"));
@@ -129,9 +155,27 @@ void Match::update()
 		break;
 
 	case Match::MatchEnd:
-		if (timeInState > 60 * 3)
+		if (timeInState > 30 * 5)
 		{
 			reset();
+		}
+		break;
+
+	case Match::Queued:
+		if (timeInState > 30 * 1)
+		{
+			switch (queuedState)
+			{
+			case Match::GoalKick:
+				setupGoalKick(electedTeam);
+				break;
+			case Match::Corner:
+				setupCorner(electedTeam);
+				break;
+			default:
+				setState(queuedState);
+				break;
+			}
 		}
 		break;
 	}
@@ -147,6 +191,18 @@ void Match::setState(Match::State newState)
 	electedTeam = nullptr;
 	engine.ball.setOwner(nullptr);
 }
+
+void Match::queueState(Match::State newState, Team* team, Person* kicker)
+{
+	if (state != Match::Queued)
+	{
+		setState(Match::Queued);
+		queuedState = newState;
+		electedTeam = team;
+		electedKicker = kicker;
+	}
+}
+
 
 bool Match::shouldAllowFreeMovement()
 {
@@ -165,6 +221,8 @@ bool Match::shouldAllowKicking()
 		return false;
 	case Match::Playing:
 		return true;
+	case Match::Queued:
+		return false;
 	default:
 		return timeInState > 60;
 	}
@@ -182,14 +240,8 @@ void Match::onKick()
 	}
 }
 
-void Match::setupKickOff(Team* team)
+void Match::teleportPlayersToFormationPositions()
 {
-	engine.ball.setPosition(CENTER_MARK_X, CENTER_MARK_Y);
-	setState(Match::KickOff);
-
-	electedTeam = team;
-	electedKicker = &team->players[PLAYERS_PER_TEAM - 1];
-
 	for (int n = 0; n < PLAYERS_PER_TEAM * 2; n++)
 	{
 		Person& person = engine.people[n];
@@ -199,6 +251,61 @@ void Match::setupKickOff(Team* team)
 		person.y = formationY;
 		person.direction = person.getTeam()->isTopHalf() ? South : North;
 	}
+}
+
+void Match::setupKickOff(Team* team)
+{
+	engine.ball.setPosition(CENTER_MARK_X, CENTER_MARK_Y);
+	setState(Match::KickOff);
+
+	electedTeam = team;
+	electedKicker = &team->players[PLAYERS_PER_TEAM - 1];
+	teleportPlayersToFormationPositions();
+
+	electedKicker->takeBall();
+}
+
+void Match::setupCorner(Team* team)
+{
+	engine.renderer.showLargeMessage(PSTR("CORNER"));
+
+	int cornerX = engine.ball.x < BACKGROUND_WIDTH / 2 ? PITCH_LEFT : PITCH_RIGHT;
+
+	if (team->isTopHalf())
+	{
+		engine.ball.setPosition(cornerX, PITCH_BOTTOM);
+	}
+	else
+	{
+		engine.ball.setPosition(cornerX, PITCH_TOP);
+	}
+	setState(Match::Corner);
+
+	electedTeam = team;
+	electedKicker = &team->players[PLAYERS_PER_TEAM - 1];
+	teleportPlayersToFormationPositions();
+
+	electedKicker->takeBall();
+}
+
+void Match::setupGoalKick(Team* team)
+{
+	engine.renderer.showLargeMessage(PSTR("GOAL KICK"));
+
+	if (team->isTopHalf())
+	{
+		engine.ball.setPosition(CENTER_MARK_X + 32, PITCH_TOP + 16);
+	}
+	else
+	{
+		engine.ball.setPosition(CENTER_MARK_X + 32, PITCH_BOTTOM - 16);
+	}
+	
+	setState(Match::GoalKick);
+
+	electedTeam = team;
+	electedKicker = &team->players[0];
+	teleportPlayersToFormationPositions();
 
 	electedKicker->takeBall();
 }
@@ -242,4 +349,14 @@ char* Match::getMatchTimeString()
 	ptr = printInt(ptr, seconds, true);
 
 	return buffer;
+}
+
+Team* Match::getTeamAtTopHalf()
+{
+	return &engine.teams[!matchHalf];
+}
+
+Team* Match::getTeamAtBottomHalf()
+{
+	return &engine.teams[matchHalf];
 }

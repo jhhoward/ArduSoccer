@@ -14,6 +14,7 @@ public:
 	void drawBitmap(int16_t x, int16_t y, const uint8_t* bitmap, uint8_t w, uint8_t h, uint8_t color);
 	void fillRect(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t colour);
 
+	void connectMultiplayer(bool isHost) {}
 	
 private:
 	void drawPixel(SDL_Surface *surface, int x, int y, Uint32 pixel);

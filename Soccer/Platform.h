@@ -21,15 +21,15 @@ enum
 class PlatformBase
 {
 public:
-	uint8_t readInput() { return inputState; }
-	uint8_t readInputDown() { return inputState & (~lastInputState); }
-	uint8_t readInputUp() { return lastInputState & (~inputState); }
+	uint8_t readInput(uint8_t playerId = 0)		{ return inputState[playerId]; }
+	uint8_t readInputDown(uint8_t playerId = 0) { return inputState[playerId] & (~lastInputState[playerId]); }
+	uint8_t readInputUp(uint8_t playerId = 0)	{ return lastInputState[playerId] & (~inputState[playerId]); }
 
 	bool isMuted() { return m_isMuted; }
 	void setMuted(bool muted) { m_isMuted = muted; }
 
-	uint8_t lastInputState;
-	uint8_t inputState;
+	uint8_t lastInputState[2];
+	uint8_t inputState[2];
 	bool m_isMuted : 1;
 };
 

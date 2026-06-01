@@ -17,12 +17,30 @@ inline void clearDisplay(uint8_t colour)
 	//memset(_displayBuffer, data, LCDWIDTH * LCDHEIGHT / 8);
 }
 
+enum class ConnectionStatus
+{
+	Disconnected,
+	SerialHost,
+	SerialClient
+};
+
 class ArduboyPlatform : public PlatformBase
 {
 public:
 	void playSound(uint8_t id);
+	void connectMultiplayer(bool isHost);
 
 	void update();
+	void sendNetworkPacket();
+	void sendNackPacket();
+	void parseNetwork();
+	
+	void updateInput();
+	
+	ConnectionStatus connectionStatus = ConnectionStatus::Disconnected;
+	uint8_t networkFrame;
+	unsigned long lastPacketSentTime = 0;
+	bool isWaitingForRemote;
 };
 
 void ERROR(const char* msg);

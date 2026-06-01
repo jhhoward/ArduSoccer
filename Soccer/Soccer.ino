@@ -25,15 +25,16 @@ void setup() {
 }
 
 void loop() {
-  static int16_t tickAccum = 0;
-  unsigned long timingSample = millis();
-  tickAccum += (timingSample - lastTimingSample);
-  lastTimingSample = timingSample;
+  //static int16_t tickAccum = 0;
+  //unsigned long timingSample = millis();
+  //tickAccum += (timingSample - lastTimingSample);
+  //lastTimingSample = timingSample;
   
-  if (!arduboy.nextFrame()) return; 
- 
-  Platform.update();
+  //Platform.updateNetwork();
 
+  if (!arduboy.nextFrame()) return; 
+
+  Platform.update();
 
 /*  constexpr int16_t frameDuration = 1000 / TARGET_FRAMERATE;
   while(tickAccum > frameDuration)

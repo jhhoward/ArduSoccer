@@ -288,8 +288,11 @@ KeyMap KeyMappings[] =
 
 void SDLPlatform::updateInputState()
 {
-	lastInputState = inputState;
-	inputState = 0;
+	lastInputState[REMOTE_PLAYER] = 0;
+	inputState[REMOTE_PLAYER] = 0;
+
+	lastInputState[LOCAL_PLAYER] = inputState[LOCAL_PLAYER];
+	inputState[LOCAL_PLAYER] = 0;
 
 	const uint8_t* keyStates = SDL_GetKeyboardState(NULL);
 
@@ -297,7 +300,7 @@ void SDLPlatform::updateInputState()
 	{
 		if (keyStates[KeyMappings[n].key])
 		{
-			inputState |= KeyMappings[n].mask;
+			inputState[LOCAL_PLAYER] |= KeyMappings[n].mask;
 		}
 	}
 }

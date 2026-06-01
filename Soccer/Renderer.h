@@ -47,4 +47,8 @@ private:
 	uint8_t largeMessageX;
 };
 
+extern const Font smallFont PROGMEM;
+extern const Font largeFont PROGMEM;
+
+
 #endif

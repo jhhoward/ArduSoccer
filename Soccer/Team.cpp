@@ -65,6 +65,47 @@ void Team::calculateFormationPosition(uint8_t index, int16_t& outX, int16_t& out
 			formationOffsetY = 64;
 		}
 	}
+	else if (engine.match.state == Match::GoalKick)
+	{
+		formationOffsetX = 0;
+
+		if (engine.match.electedTeam && engine.match.electedTeam->isTopHalf())
+		{
+			formationOffsetY = 64;
+		}
+		else
+		{
+			formationOffsetY = -64;
+		}
+	}
+	else if (engine.match.state == Match::Corner)
+	{
+		formationOffsetX = 0;
+
+		if (engine.match.electedTeam && engine.match.electedTeam->isTopHalf())
+		{
+			formationOffsetY = 64;
+		}
+		else
+		{
+			formationOffsetY = -64;
+		}
+
+		if (engine.match.electedKicker == &engine.people[index])
+		{
+			if (engine.ball.x < BACKGROUND_WIDTH / 2)
+			{
+				outX = engine.ball.x - 6;
+			}
+			else
+			{
+				outX = engine.ball.x + 6;
+			}
+
+			outY = engine.ball.y;
+			return;
+		}
+	}
 
 	if (index >= PLAYERS_PER_TEAM)
 		index -= PLAYERS_PER_TEAM;
@@ -72,8 +113,19 @@ void Team::calculateFormationPosition(uint8_t index, int16_t& outX, int16_t& out
 	if (index == 0)
 	{
 		// Goalie
-		outX = BACKGROUND_WIDTH / 2;
-		outY = CENTER_MARK_Y - 125 * multiplier;
+
+		if (engine.match.state == Match::GoalKick && engine.match.electedTeam == this)
+		{
+			// Goal kick position
+			outX = engine.ball.x - 6;
+			outY = isTopHalf() ? engine.ball.y - 4 : engine.ball.y + 4;
+		}
+		else
+		{
+			// Standing in goal
+			outX = BACKGROUND_WIDTH / 2;
+			outY = CENTER_MARK_Y - 125 * multiplier;
+		}
 		return;
 	}
 
@@ -206,17 +258,20 @@ void Team::calculateCycleSelectedPlayer()
 	Person* closest = nullptr;
 	int closestDistance = 0;
 
-	for (int n = 0; n < PLAYERS_PER_TEAM; n++)
+	for (int pass = 0; pass < 2; pass++)
 	{
-		Person& person = players[n];
-		if (selectedPlayer != &person && !person.isGoalie())
+		for (int n = 0; n < PLAYERS_PER_TEAM; n++)
 		{
-			int distance = estimateDistance(engine.ball.x, engine.ball.y, person.x, person.y);
-
-			if (closest == nullptr || distance < closestDistance)
+			Person& person = players[n];
+			if (selectedPlayer != &person && !person.isGoalie() && (person.isOnScreen() || pass == 1))
 			{
-				closest = &person;
-				closestDistance = distance;
+				int distance = estimateDistance(engine.ball.x, engine.ball.y, person.x, person.y);
+
+				if (closest == nullptr || distance < closestDistance)
+				{
+					closest = &person;
+					closestDistance = distance;
+				}
 			}
 		}
 	}

@@ -13,6 +13,7 @@
 #include "Ball.h"
 #include "Match.h"
 #include "Team.h"
+#include "Menu.h"
 
 enum
 {
@@ -38,13 +39,20 @@ public:
 	void update();
 	void draw();
 
+	void startSinglePlayer();
+	void startMultiplayer(bool isHost);
+	void startDemo();
+
 	void setCameraFocus(int focusX, int focusY);
+
+	bool isDemo();
 
 	int16_t frameCount;
 	uint8_t gameState;
 
 	Renderer renderer;
 	Camera camera;
+	Menu menu;
 	Person people[NUM_PEOPLE];
 	Ball ball;
 	Match match;

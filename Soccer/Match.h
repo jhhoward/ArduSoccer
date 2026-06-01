@@ -25,21 +25,29 @@ public:
 		FreeKick,
 		Scored,
 		HalfTime,
-		MatchEnd
+		MatchEnd,
+		Queued
 	};
 
 	void reset();
 	void update();
 
 	void setState(Match::State newState);
+	void queueState(Match::State newState, Team* electedTeam = nullptr, Person* electedKicker = nullptr);
 	bool shouldAllowFreeMovement();
 	bool shouldAllowKicking();
 
 	void setupKickOff(Team* team);	
+	void setupGoalKick(Team* team);
+	void setupCorner(Team* team);
+	void teleportPlayersToFormationPositions();
 	void onKick();
 	void onGoalScored(Team* team);
 	void onHalfTime();
-	void onMatchEnd();
+	void onMatchEnd();	
+
+	class Team* getTeamAtTopHalf();
+	class Team* getTeamAtBottomHalf();
 
 	void regenerateScoreText();
 	char* getMatchTimeString();
@@ -50,6 +58,7 @@ public:
 	Team* electedTeam;
 
 	State state;
+	State queuedState;
 	uint32_t timeInState;
 
 	uint32_t matchTimer;

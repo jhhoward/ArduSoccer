@@ -7,7 +7,7 @@
 
 #if defined (_WIN32)
 
-#define SHOW_FULL_PITCH 0
+#define SHOW_FULL_PITCH 1
 //#define STANDARD_FILE_STREAMING
 //#define PROGMEM_MAP_STREAMING
 //#define EMULATE_GAMEBUINO 1
@@ -129,8 +129,8 @@ using uint24_t = __uint24;
 #define GOAL_BAR_Z1 21
 #define GOAL_BAR_Z2 27
 
-#define GOAL_NET_X1 100
-#define GOAL_NET_X2 155
+#define GOAL_NET_X1 104 // 100
+#define GOAL_NET_X2 151 // 155
 
 #define TOP_GOAL_NET_Y1 27
 #define TOP_GOAL_NET_Y2 33
@@ -154,6 +154,12 @@ enum
 	WHITE_TEAM = 0,
 	BLACK_TEAM = 1,
 	REFEREE_TEAM = 2
+};
+
+enum
+{
+	LOCAL_PLAYER = 0,
+	REMOTE_PLAYER = 1
 };
 
 enum Direction
