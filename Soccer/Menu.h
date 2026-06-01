@@ -26,6 +26,8 @@ public:
 	static void openMultiplayerMenu();
 	static void hostMultiplayerGame();
 	static void joinMultiplayerGame();
+	static void connectSerial();
+	static void connectLinkCable();
 };
 
 #endif

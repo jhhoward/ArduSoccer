@@ -1,9 +1,16 @@
 #include "ArduboyPlatform.h"
+#include "Engine.h"
 //#include "Generated/Data_Audio.h"
 
 ArduboyPlatform Platform;
 
-uint8_t debugValue1 = 0, debugValue2 = 0;
+constexpr uint8_t UPDATE_PACKET = 0xfa;
+constexpr uint8_t NACK_PACKET = 0xfb;
+constexpr uint8_t SYNC_PACKET = 0xfc;
+constexpr uint8_t PACKET_SIZE = 4;
+
+uint8_t networkBuffer[PACKET_SIZE];
+uint8_t networkBufferSize = 0;
 
 void ArduboyPlatform::updateInput()
 {
@@ -53,13 +60,14 @@ void ArduboyPlatform::update()
 	if(connectionStatus == ConnectionStatus::Disconnected)
 	{
 		updateInput();
+		hostId++;
 	}
 	else
 	{
 		arduboy.setRGBled(0, 0, 0);
 		
 		updateInput();
-		sendNetworkPacket();
+		sendNetworkPacket(UPDATE_PACKET, inputState[LOCAL_PLAYER]);
 		isWaitingForRemote = true;
 		
 		while(isWaitingForRemote)
@@ -68,8 +76,8 @@ void ArduboyPlatform::update()
 			
 			if((millis() - lastPacketSentTime) > 1000)
 			{
-				arduboy.setRGBled(0, 255, 255);
-				sendNackPacket();
+				arduboy.setRGBled(255, 0, 0);
+				sendNetworkPacket(NACK_PACKET);
 			}
 			
 			Serial.flush();
@@ -77,37 +85,15 @@ void ArduboyPlatform::update()
 	}
 }
 
-constexpr uint8_t FRAME_START = 0xfa;
-constexpr uint8_t NACK_START = 0xfb;
-constexpr uint8_t PACKET_SIZE = 4;
-
-uint8_t networkBuffer[PACKET_SIZE];
-uint8_t networkBufferSize = 0;
-
-void ArduboyPlatform::sendNetworkPacket()
+void ArduboyPlatform::sendNetworkPacket(uint8_t packetType, uint8_t data)
 {
 	if(Serial.availableForWrite() >= PACKET_SIZE)
 	{
-		uint8_t checkSum = FRAME_START + networkFrame + inputState[LOCAL_PLAYER];
+		uint8_t checkSum = packetType + networkFrame + data;
 		
-		Serial.write(FRAME_START);
+		Serial.write(packetType);
 		Serial.write(networkFrame);
-		Serial.write(inputState[LOCAL_PLAYER]);
-		Serial.write(checkSum);
-		
-		lastPacketSentTime = millis();
-	}
-}
-
-void ArduboyPlatform::sendNackPacket()
-{
-	if(Serial.availableForWrite() >= PACKET_SIZE)
-	{
-		uint8_t checkSum = NACK_START + networkFrame;
-		
-		Serial.write(NACK_START);
-		Serial.write(networkFrame);
-		Serial.write((uint8_t)0);
+		Serial.write(data);
 		Serial.write(checkSum);
 		
 		lastPacketSentTime = millis();
@@ -116,14 +102,12 @@ void ArduboyPlatform::sendNackPacket()
 
 void ArduboyPlatform::parseNetwork()
 {
-	debugValue1 = networkFrame;
-	
 	while(Serial.available())
 	{
 		if(networkBufferSize == 0)
 		{
 			uint8_t packetType = Serial.read();
-			if(packetType == FRAME_START || packetType == NACK_START)
+			if(packetType == UPDATE_PACKET || packetType == NACK_PACKET || packetType == SYNC_PACKET)
 			{
 				networkBuffer[networkBufferSize++] = packetType;
 			}
@@ -139,62 +123,64 @@ void ArduboyPlatform::parseNetwork()
 			
 			uint8_t packetType = networkBuffer[0];
 			uint8_t remoteFrame = networkBuffer[1];
-			uint8_t remoteButtons = networkBuffer[2];
+			uint8_t remoteData = networkBuffer[2];
 			uint8_t checkSum = networkBuffer[3];
 			
-			uint8_t testChecksum = packetType + remoteFrame + remoteButtons;
-
-			debugValue2 = remoteFrame;
+			uint8_t testChecksum = packetType + remoteFrame + remoteData;
 
 			if(checkSum != testChecksum)
 			{
 				// Corrupt packet, ignore
 				arduboy.setRGBled(255, 0, 0);
-				sendNackPacket();
+				sendNetworkPacket(NACK_PACKET);
 				continue;
 			}
 			
 			lastPacketSentTime = millis();
 
-			if(packetType == FRAME_START)
+			if(packetType == SYNC_PACKET && connectionStatus == ConnectionStatus::Disconnected)
+			{
+				if(hostId > remoteData)
+				{
+					connectionStatus = ConnectionStatus::SerialHost;
+				}
+				else if(hostId < remoteData)
+				{
+					connectionStatus = ConnectionStatus::SerialClient;
+				}
+			}
+			else if(packetType == UPDATE_PACKET && connectionStatus != ConnectionStatus::Disconnected)
 			{
 				if(remoteFrame == networkFrame)
 				{
 					// Received successful frame
-					arduboy.setRGBled(0, 255, 0);
 					lastInputState[REMOTE_PLAYER] = inputState[REMOTE_PLAYER];
-					inputState[REMOTE_PLAYER] = remoteButtons;
+					inputState[REMOTE_PLAYER] = remoteData;
 					networkFrame++;
 					isWaitingForRemote = false;
-					return;
 				}
 				else
 				{
-					sendNackPacket();
+					sendNetworkPacket(NACK_PACKET);
 				}
 			}
-			else if(packetType == NACK_START)
+			else if(packetType == NACK_PACKET && connectionStatus != ConnectionStatus::Disconnected)
 			{
 				if(remoteFrame == networkFrame)
 				{
 					// Resend packet
-					sendNetworkPacket();
+					sendNetworkPacket(UPDATE_PACKET, inputState[LOCAL_PLAYER]);
 				}
 				else if(remoteFrame == (uint8_t)(networkFrame - 1))
 				{
 					// Resend previous packet
-					uint8_t temp = inputState[LOCAL_PLAYER];
-					inputState[LOCAL_PLAYER] = lastInputState[LOCAL_PLAYER];
 					networkFrame--;
-					
-					sendNetworkPacket();
-					
+					sendNetworkPacket(UPDATE_PACKET, lastInputState[LOCAL_PLAYER]);
 					networkFrame++;
-					inputState[LOCAL_PLAYER] = temp;
 				}
 				else
 				{
-					arduboy.setRGBled(255, 255, 255);
+					arduboy.setRGBled(255, 0, 0);
 					continue;
 					//arduboy.displayOff();
 					//while(1);
@@ -212,12 +198,32 @@ void ArduboyPlatform::parseNetwork()
 }
 
 
-void ArduboyPlatform::connectMultiplayer(bool isHost)
+bool ArduboyPlatform::connectMultiplayer()
 {
 	Serial.begin(115200);
-
-	connectionStatus = isHost ? ConnectionStatus::SerialHost : ConnectionStatus::SerialClient;
+	
+	// Show connecting screen
+	engine.renderer.drawText(smallFont, PSTR("CONNECT 2 ARDUBOYS"), 10, 24, 1);
+	engine.renderer.drawText(smallFont, PSTR("TO SERIAL RELAY"), 19, 32, 1);
+	arduboy.display(true);
+	
 	networkFrame = 0;
 	isWaitingForRemote = false;
+
+	sendNetworkPacket(SYNC_PACKET, hostId);
+
+	while(connectionStatus == ConnectionStatus::Disconnected)
+	{
+		if((millis() - lastPacketSentTime) > 1000)
+		{
+			sendNetworkPacket(SYNC_PACKET, hostId);
+		}
+		
+		parseNetwork();
+	}
+	
+	sendNetworkPacket(SYNC_PACKET, hostId);
+	
+	return connectionStatus == ConnectionStatus::SerialHost;
 }
 

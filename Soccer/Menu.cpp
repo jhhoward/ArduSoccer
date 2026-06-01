@@ -1,6 +1,7 @@
 #include "Defines.h"
 #include "Menu.h"
 #include "Engine.h"
+#include "Platform.h"
 
 #define MENU_ENTRY_END 0
 #define MENU_STR(x) (const void*)(x)
@@ -11,6 +12,8 @@ typedef void (*MenuFn)(void);
 const char Str_SinglePlayer[] PROGMEM = "SINGLE PLAYER";
 const char Str_Multiplayer[] PROGMEM = "MULTIPLAYER";
 const char Str_Demo[] PROGMEM = "DEMO";
+const char Str_SerialRelay[] PROGMEM = "SERIAL RELAY"; 
+const char Str_LinkCable[] PROGMEM = "FX-C LINK CABLE";
 const char Str_Host[] PROGMEM = "HOST GAME";
 const char Str_Join[] PROGMEM = "JOIN GAME";
 
@@ -25,6 +28,13 @@ const void* const Menu_Main[] PROGMEM =
 };
 
 const void* const Menu_Multiplayer[] PROGMEM =
+{
+	Str_SerialRelay,		MENU_CALLBACK(&Menu::connectSerial),
+	Str_LinkCable,			MENU_CALLBACK(&Menu::connectLinkCable),
+	MENU_ENTRY_END
+};
+
+const void* const Menu_LinkCableMultiplayer[] PROGMEM =
 {
 	Str_Host,				MENU_CALLBACK(&Menu::hostMultiplayerGame),
 	Str_Join,				MENU_CALLBACK(&Menu::joinMultiplayerGame),
@@ -144,11 +154,21 @@ void Menu::openMultiplayerMenu()
 
 void Menu::hostMultiplayerGame()
 {
-	engine.startMultiplayer(true);
+//	engine.startMultiplayer(true);
 }
 
 void Menu::joinMultiplayerGame()
 {
-	engine.startMultiplayer(false);
+//	engine.startMultiplayer(false);
 }
 
+void Menu::connectSerial()
+{
+	bool isHost = Platform.connectMultiplayer();
+	engine.startMultiplayer(isHost);
+}
+
+void Menu::connectLinkCable()
+{
+	engine.menu.switchMenu(Menu_LinkCableMultiplayer);
+}

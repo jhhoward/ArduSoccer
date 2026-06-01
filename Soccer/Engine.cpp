@@ -13,8 +13,6 @@ void Engine::init()
 
 void Engine::startMultiplayer(bool isHost)
 {
-	Platform.connectMultiplayer(true);
-
 	teams[WHITE_TEAM].init(people, isHost ? Team::LocalPlayer : Team::RemotePlayer);
 	teams[BLACK_TEAM].init(people + PLAYERS_PER_TEAM, isHost ? Team::RemotePlayer : Team::LocalPlayer);
 	match.reset();

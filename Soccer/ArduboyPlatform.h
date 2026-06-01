@@ -28,17 +28,17 @@ class ArduboyPlatform : public PlatformBase
 {
 public:
 	void playSound(uint8_t id);
-	void connectMultiplayer(bool isHost);
+	bool connectMultiplayer();
 
 	void update();
-	void sendNetworkPacket();
-	void sendNackPacket();
+	void sendNetworkPacket(uint8_t packetType, uint8_t data = 0);
 	void parseNetwork();
 	
 	void updateInput();
 	
 	ConnectionStatus connectionStatus = ConnectionStatus::Disconnected;
 	uint8_t networkFrame;
+	uint8_t hostId;
 	unsigned long lastPacketSentTime = 0;
 	bool isWaitingForRemote;
 };
