@@ -329,14 +329,25 @@ void Renderer::drawText(const Font& font, const char* text, int16_t x, int16_t y
 			break;
 		text++;
 
-		int index = c - ' ';
-
-		if (index == 0)
+		if (c == ' ')
 		{
 			x += spaceWidth;
 		}
 		else
 		{
+			int index = 0;
+
+			if (c == '!')
+				index = 0;
+			else if (c == '-')
+				index = 1;
+			else if (c == ':')
+				index = 2;
+			else if (c >= '0' && c <= '9')
+				index = 3 + (c - '0');
+			else if (c >= 'A' && c <= 'Z')
+				index = 13 + (c - 'A');
+
 			const uint8_t* data = fontData + (pitch * index);
 			drawBitmap(x, y, data, glyphWidth, glyphHeight, colour);
 			x += spacing;

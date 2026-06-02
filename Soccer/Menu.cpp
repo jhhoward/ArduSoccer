@@ -66,7 +66,7 @@ void Menu::draw()
 	int y = startY;
 	int item = 0;
 
-	engine.renderer.drawText(smallFont, PSTR("ARDU"), DISPLAYWIDTH / 2 - 6 * 2, 0, 1);
+	engine.renderer.drawText(smallFont, PSTR("MICRO"), DISPLAYWIDTH / 2 - 3 * 5, 0, 1);
 	engine.renderer.drawText(largeFont, PSTR("SOCCER"), DISPLAYWIDTH / 2 - 15 * 3, 8, 1);
 
 	while (1)

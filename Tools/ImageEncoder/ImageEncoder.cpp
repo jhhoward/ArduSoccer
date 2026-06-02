@@ -809,8 +809,10 @@ int main(int argc, char* argv[])
 
 		EncodeBitmapWithMask(fs, "Assets/selectionArrow.png", "selectionArrowSprite", "selectionArrowSpriteMask");
 
-		EncodeBitmapFont(fs, "Assets/largeFont.png", "largeFontData", 16, 16);
-		EncodeBitmapFont(fs, "Assets/smallFont.png", "smallFontData", 8, 8);
+		//EncodeBitmapFont(fs, "Assets/largeFont.png", "largeFontData", 16, 16);
+		//EncodeBitmapFont(fs, "Assets/smallFont.png", "smallFontData", 8, 8);
+		EncodeBitmapFont(fs, "Assets/largeFontReduced.png", "largeFontData", 16, 16);
+		EncodeBitmapFont(fs, "Assets/smallFontReduced.png", "smallFontData", 8, 8);
 
 		fclose(fs);
 	}
