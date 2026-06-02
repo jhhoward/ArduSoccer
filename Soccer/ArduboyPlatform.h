@@ -27,7 +27,7 @@ enum class ConnectionStatus
 class ArduboyPlatform : public PlatformBase
 {
 public:
-	void playSound(uint8_t id);
+	void playSound(const uint16_t* sound);
 	bool connectMultiplayer();
 
 	void update();

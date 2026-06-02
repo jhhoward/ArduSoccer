@@ -22,6 +22,7 @@ void Match::reset()
 
 void Match::onGoalScored(Team* team)
 {
+	//Platform.playSound(Sounds::goal);
 	team->score++;
 	setState(Match::Scored);
 	electedTeam = team;

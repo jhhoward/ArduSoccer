@@ -203,8 +203,6 @@ bool ArduboyPlatform::connectMultiplayer()
 	Serial.begin(115200);
 	
 	// Show connecting screen
-	engine.renderer.drawText(smallFont, PSTR("CONNECT 2 ARDUBOYS"), 10, 24, 1);
-	engine.renderer.drawText(smallFont, PSTR("TO SERIAL RELAY"), 19, 32, 1);
 	arduboy.display(true);
 	
 	networkFrame = 0;

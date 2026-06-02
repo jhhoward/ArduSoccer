@@ -2,6 +2,9 @@
 #include "Menu.h"
 #include "Engine.h"
 #include "Platform.h"
+#include "Generated/MenuAssets.inc.h"
+
+#define WITH_LINK_CABLE 0
 
 #define MENU_ENTRY_END 0
 #define MENU_STR(x) (const void*)(x)
@@ -9,24 +12,31 @@
 
 typedef void (*MenuFn)(void);
 
-const char Str_SinglePlayer[] PROGMEM = "SINGLE PLAYER";
+const char Str_SinglePlayer[] PROGMEM = "PLAY MATCH";
 const char Str_Multiplayer[] PROGMEM = "MULTIPLAYER";
 const char Str_Demo[] PROGMEM = "DEMO";
 const char Str_SerialRelay[] PROGMEM = "SERIAL RELAY"; 
+const char Str_SoundOn[] PROGMEM = "SOUND FX: ON";
+const char Str_SoundOff[] PROGMEM = "SOUND FX: OFF";
+
+#if WITH_LINK_CABLE
 const char Str_LinkCable[] PROGMEM = "FX-C LINK CABLE";
 const char Str_Host[] PROGMEM = "HOST GAME";
 const char Str_Join[] PROGMEM = "JOIN GAME";
+#endif
 
 
 // Main menu
 const void* const Menu_Main[] PROGMEM =
 {
 	Str_SinglePlayer,		MENU_CALLBACK(&Menu::startSinglePlayer),
+	Str_SoundOn,			MENU_CALLBACK(&Menu::toggleSound),
 	Str_Multiplayer,		MENU_CALLBACK(&Menu::openMultiplayerMenu),
 	Str_Demo,				MENU_CALLBACK(&Menu::startDemo),
 	MENU_ENTRY_END
 };
 
+#if WITH_LINK_CABLE
 const void* const Menu_Multiplayer[] PROGMEM =
 {
 	Str_SerialRelay,		MENU_CALLBACK(&Menu::connectSerial),
@@ -40,6 +50,7 @@ const void* const Menu_LinkCableMultiplayer[] PROGMEM =
 	Str_Join,				MENU_CALLBACK(&Menu::joinMultiplayerGame),
 	MENU_ENTRY_END
 };
+#endif
 
 void Menu::init()
 {
@@ -50,10 +61,13 @@ void Menu::draw()
 {
 	int index = 0;
 	int x = 14;
-	int startY = 8;
+	int startY = 25;
 	int itemSpacing = 10;
 	int y = startY;
 	int item = 0;
+
+	engine.renderer.drawText(smallFont, PSTR("ARDU"), DISPLAYWIDTH / 2 - 6 * 2, 0, 1);
+	engine.renderer.drawText(largeFont, PSTR("SOCCER"), DISPLAYWIDTH / 2 - 15 * 3, 8, 1);
 
 	while (1)
 	{
@@ -62,9 +76,15 @@ void Menu::draw()
 
 		const char* text = (const char*)pgm_read_ptr(&currentMenu[index]);
 
+		if (text == Str_SoundOn && Platform.isMuted())
+		{
+			text = Str_SoundOff;
+		}
+
 		if (item == currentSelection)
 		{
-			engine.renderer.drawText(smallFont, PSTR(">"), 1, y, 1);
+			drawBitmap(3, y, menuBallSprite, 8, 8, 1);
+			//engine.renderer.drawText(smallFont, PSTR(">"), 1, y, 1);
 		}
 
 		engine.renderer.drawText(smallFont, text, x, y, 1);
@@ -149,7 +169,11 @@ void Menu::startDemo()
 
 void Menu::openMultiplayerMenu()
 {
+#if WITH_LINK_CABLE
 	engine.menu.switchMenu(Menu_Multiplayer);
+#else
+	connectSerial();
+#endif
 }
 
 void Menu::hostMultiplayerGame()
@@ -164,11 +188,24 @@ void Menu::joinMultiplayerGame()
 
 void Menu::connectSerial()
 {
+	drawBitmap(DISPLAYWIDTH / 2 - 22, 0, relaySprite, 45, 24, 1);
+	engine.renderer.drawText(smallFont, PSTR("CONNECT 2 ARDUBOYS"), 10, 30, 1);
+	engine.renderer.drawText(smallFont, PSTR("TO SERIAL RELAY"), 19, 38, 1);
+
+	drawBitmap(DISPLAYWIDTH / 2 - 111 / 2, DISPLAYHEIGHT - 8, urlSprite, 111, 8, 1);
+
 	bool isHost = Platform.connectMultiplayer();
 	engine.startMultiplayer(isHost);
 }
 
 void Menu::connectLinkCable()
 {
+#if WITH_LINK_CABLE
 	engine.menu.switchMenu(Menu_LinkCableMultiplayer);
+#endif
+}
+
+void Menu::toggleSound()
+{
+	Platform.setMuted(!Platform.isMuted());
 }

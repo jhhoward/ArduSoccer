@@ -28,6 +28,7 @@ public:
 	static void joinMultiplayerGame();
 	static void connectSerial();
 	static void connectLinkCable();
+	static void toggleSound();
 };
 
 #endif

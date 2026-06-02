@@ -1,15 +1,17 @@
 #include <Arduboy2.h>       
+#include <ArduboyTones.h>
 #include "Engine.h"
 #include "ArduboyPlatform.h"
 //#include "Generated/Data_Audio.h"
 
 Arduboy2Base arduboy;
-
+ArduboyTones sound(arduboy.audio.enabled);
 
 unsigned long lastTimingSample;
 
-void ArduboyPlatform::playSound(uint8_t id)
+void ArduboyPlatform::playSound(const uint16_t* pattern)
 {
+	sound.tones(pattern);
 }
 
 void setup() {

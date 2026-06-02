@@ -819,5 +819,20 @@ int main(int argc, char* argv[])
 		printf("Error opening %s for write\n", outputPath);
 	}
 
+	outputPath = "Soccer/Generated/MenuAssets.inc.h";
+	fopen_s(&fs, outputPath, "w");
+
+	if (fs)
+	{
+		EncodeBitmap(fs, "Assets/menuBall.png", "menuBallSprite");
+		EncodeBitmap(fs, "Assets/relay.png", "relaySprite");
+		EncodeBitmap(fs, "Assets/url.png", "urlSprite");
+		fclose(fs);
+	}
+	else
+	{
+		printf("Error opening %s for write\n", outputPath);
+	}
+
 	return 0;
 }

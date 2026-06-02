@@ -222,6 +222,8 @@ void Person::kickBall(int velocityX, int velocityY, int velocityZ)
 	displayFrame = pgm_read_byte(&walkAnimations[animation * 4 + 1]);
 
 	engine.match.onKick();
+
+	Platform.playSound(Sounds::kick);
 }
 
 void Person::update()

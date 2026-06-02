@@ -32,6 +32,13 @@ struct GameSettings
 	uint8_t matchHalfLength;
 };
 
+class Sounds
+{
+public:
+	static const uint16_t kick[];
+	static const uint16_t goal[];
+};
+
 class Engine
 {
 public:

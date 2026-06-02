@@ -549,8 +549,9 @@ void clearDisplay(uint8_t colour)
 }
 
 
-void SDLPlatform::playSound(uint8_t id)
+void SDLPlatform::playSound(const uint16_t* sound)
 {
+	Play(sound);
 //	Play((const uint16_t*) (diskContents + Data_audio + Data_AudioPatterns[id]));
 }
 

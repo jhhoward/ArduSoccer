@@ -7,7 +7,7 @@
 
 #if defined (_WIN32)
 
-#define SHOW_FULL_PITCH 1
+#define SHOW_FULL_PITCH 0
 //#define STANDARD_FILE_STREAMING
 //#define PROGMEM_MAP_STREAMING
 //#define EMULATE_GAMEBUINO 1

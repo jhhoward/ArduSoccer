@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arduboy Serial Relay</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: #1e1e24; 
+            color: #f0f0f5; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+        }
+        h2 {
+            color: #ffffff;
+            border-bottom: 2px solid #3a3a4a;
+            padding-bottom: 10px;
+        }
+        .port-box { 
+            border: 1px solid #3a3a4a; 
+            padding: 20px; 
+            margin: 15px 0; 
+            background: #2a2a35; 
+            border-radius: 8px; 
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .port-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        button { 
+            padding: 10px 20px; 
+            font-size: 14px; 
+            cursor: pointer; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            font-weight: bold; 
+            transition: background 0.2s ease, transform 0.1s ease;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .btn-connect {
+            background: #28a745;
+        }
+        .btn-connect:hover {
+            background: #218838;
+        }
+        .btn-disconnect {
+            background: #dc3545;
+        }
+        .btn-disconnect:hover {
+            background: #c82333;
+        }
+        button:disabled { 
+            background: #4a4a5a !important; 
+            cursor: not-allowed; 
+            color: #8a8a9a; 
+        }
+        .status { 
+            font-weight: bold; 
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .connected { 
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745; 
+        }
+        .disconnected { 
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545; 
+        }
+        
+        /* Collapsible Log Console Panel Styling */
+        details {
+            margin-top: 25px;
+            background: #2a2a35;
+            border: 1px solid #3a3a4a;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        summary {
+            padding: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            background: #343444;
+            user-select: none;
+            color: #ffffff;
+            outline: none;
+        }
+        summary:hover {
+            background: #3d3d52;
+        }
+        .log-controls {
+            padding: 10px 15px;
+            background: #22222b;
+            border-bottom: 1px solid #3a3a4a;
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+        }
+        .log-controls label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            user-select: none;
+        }
+        .log-controls label:has(input:disabled) {
+            color: #6a6a7a;
+            cursor: not-allowed;
+        }
+        #log { 
+            width: 100%; 
+            height: 300px; 
+            background: #000; 
+            color: #00ff66; 
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; 
+            padding: 15px; 
+            box-sizing: border-box; 
+            overflow-y: scroll; 
+            font-size: 12px; 
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🎮 Arduboy Serial Relay</h2>
+    <p>Connect two Arduboys to this device to allow communication via Arduino Serial for multiplayer games.</p>
+
+    <div class="port-box">
+        <div>
+            <h3 style="margin: 0 0 5px 0;">Arduboy / Player A</h3>
+            <span id="status1" class="status disconnected">Disconnected</span>
+        </div>
+        <div class="port-controls">
+            <button id="btnConnect1" class="btn-connect">Connect Player A</button>
+        </div>
+    </div>
+
+    <div class="port-box">
+        <div>
+            <h3 style="margin: 0 0 5px 0;">Arduboy / Player B</h3>
+            <span id="status2" class="status disconnected">Disconnected</span>
+        </div>
+        <div class="port-controls">
+            <button id="btnConnect2" class="btn-connect">Connect Player B</button>
+        </div>
+    </div>
+
+    <details>
+        <summary>📜 Debugging Log</summary>
+        <div class="log-controls">
+            <label id="chkLabel">
+                <input type="checkbox" id="chkShowPackets" disabled> 
+                Write data stream to log (requires both players connected)
+            </label>
+        </div>
+        <div id="log"></div>
+    </details>
+</div>
+
+<script>
+    let port1, port2;
+    let writer1, writer2;
+    let reader1, reader2; 
+
+    const btnConnect1 = document.getElementById('btnConnect1');
+    const btnConnect2 = document.getElementById('btnConnect2');
+    const status1 = document.getElementById('status1');
+    const status2 = document.getElementById('status2');
+    const chkShowPackets = document.getElementById('chkShowPackets');
+    const logDiv = document.getElementById('log');
+
+    function log(message) {
+        logDiv.innerHTML += `[${new Date().toLocaleTimeString()}] ${message}<br>`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function bufToHex(buffer) {
+        return Array.from(buffer)
+            .map(b => '0x' + b.toString(16).toUpperCase().padStart(2, '0'))
+            .join(' ');
+    }
+
+    // Evaluates bridge link paths to adjust packet checkbox access conditions dynamically
+    function updateCheckboxState() {
+        if (port1 && port2) {
+            chkShowPackets.disabled = false;
+        } else {
+            chkShowPackets.disabled = true;
+            chkShowPackets.checked = false; // Uncheck if a link cuts out mid-game
+        }
+    }
+
+    async function resetPortUI(portNum, message) {
+        log(`<span style='color:#dc3545; font-weight:bold;'>${message}</span>`);
+        
+        if (portNum === 1) {
+            status1.textContent = "Disconnected";
+            status1.className = "status disconnected";
+            btnConnect1.textContent = "Connect Player A";
+            btnConnect1.className = "btn-connect";
+            port1 = null;
+            writer1 = null;
+            reader1 = null;
+        } else {
+            status2.textContent = "Disconnected";
+            status2.className = "status disconnected";
+            btnConnect2.textContent = "Connect Player B";
+            btnConnect2.className = "btn-connect";
+            port2 = null;
+            writer2 = null;
+            reader2 = null;
+        }
+        updateCheckboxState();
+    }
+
+    async function disconnectPort(portNum) {
+        if (portNum === 1) {
+            if (reader1) { try { await reader1.cancel(); } catch(e){} }
+            if (writer1) { try { writer1.releaseLock(); } catch(e){} }
+            if (port1) { try { await port1.close(); } catch(e){} }
+            await resetPortUI(1, "Player A manually disconnected.");
+        } else {
+            if (reader2) { try { await reader2.cancel(); } catch(e){} }
+            if (writer2) { try { writer2.releaseLock(); } catch(e){} }
+            if (port2) { try { await port2.close(); } catch(e){} }
+            await resetPortUI(2, "Player B manually disconnected.");
+        }
+    }
+
+    navigator.serial.addEventListener('disconnect', async (event) => {
+        if (event.target === port1) {
+            if (writer1) { try { writer1.releaseLock(); } catch(e){} }
+            if (port1) { try { await port1.close(); } catch(e){} }
+            await resetPortUI(1, "Player A hardware link broken/unplugged.");
+        } else if (event.target === port2) {
+            if (writer2) { try { writer2.releaseLock(); } catch(e){} }
+            if (port2) { try { await port2.close(); } catch(e){} }
+            await resetPortUI(2, "Player B hardware link broken/unplugged.");
+        }
+    });
+
+    async function handlePortClick(portNum, buttonElement, statusElement) {
+        if ((portNum === 1 && port1) || (portNum === 2 && port2)) {
+            await disconnectPort(portNum);
+            return;
+        }
+
+        try {
+            const port = await navigator.serial.requestPort();
+			
+			if (portNum === 1 && port === port2) {
+				alert("⚠️ Conflict: This port is already assigned to Player B! Please choose a different port.");
+				log("<span style='color:#dc3545;'>Connection rejected: Port already in use by Player B.</span>");
+				return; 
+			}
+			if (portNum === 2 && port === port1) {
+				alert("⚠️ Conflict: This port is already assigned to Player A! Please choose a different port.");
+				log("<span style='color:#dc3545;'>Connection rejected: Port already in use by Player A.</span>");
+				return; 
+			}
+			
+            await port.open({ baudRate: 115200 }); 
+            
+            log(`Player ${portNum} Serial Connection Established.`);
+            
+            statusElement.textContent = "Connected";
+            statusElement.className = "status connected";
+            buttonElement.textContent = `Disconnect Player ${portNum === 1 ? 'A' : 'B'}`;
+            buttonElement.className = "btn-disconnect";
+
+            if (portNum === 1) {
+                port1 = port;
+                writer1 = port.writable.getWriter();
+                readBinaryLoop(port1, 1);
+            } else {
+                port2 = port;
+                writer2 = port.writable.getWriter();
+                readBinaryLoop(port2, 2);
+            }
+            
+            updateCheckboxState();
+        } catch (error) {
+            log(`<span style='color:#dc3545;'>Connection failed on Player ${portNum}: ${error.message}</span>`);
+        }
+    }
+
+    async function readBinaryLoop(port, portNum) {
+        let currentReader;
+        try {
+            currentReader = port.readable.getReader();
+            if (portNum === 1) reader1 = currentReader;
+            else reader2 = currentReader;
+
+            while (true) {
+                const { value, done } = await currentReader.read();
+                if (done) { 
+                    break; 
+                }
+                if (value) {
+                    // Core Filter Condition: Only print hex elements to browser memory if the UI toggle flag is checked
+                    if (chkShowPackets.checked && !chkShowPackets.disabled) {
+                        log(`<b>From Player ${portNum}:</b> [${bufToHex(value)}] (${value.length} bytes)`);
+                    }
+                    
+                    if (portNum === 1 && writer2) {
+                        await writer2.write(value);
+                    } else if (portNum === 2 && writer1) {
+                        await writer1.write(value);
+                    }
+                }
+            }
+        } catch (error) {
+            if ((portNum === 1 && port1) || (portNum === 2 && port2)) {
+                log(`Stream interrupted on Player ${portNum}: ${error.message}`);
+            }
+        } finally {
+            if (currentReader) {
+                try { currentReader.releaseLock(); } catch(e){}
+            }
+        }
+    }
+
+    btnConnect1.addEventListener('click', () => handlePortClick(1, btnConnect1, status1));
+    btnConnect2.addEventListener('click', () => handlePortClick(2, btnConnect2, status2));
+
+    if (!('serial' in navigator)) {
+        log("<span style='color:#dc3545; font-weight:bold;'>Fatal Error: Web Serial API is completely unsupported by this browser. Use Google Chrome or Microsoft Edge!</span>");
+        btnConnect1.disabled = true;
+        btnConnect2.disabled = true;
+    }
+</script>
+</body>
+</html>

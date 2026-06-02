@@ -410,9 +410,115 @@ void writeData(char* filename, vector<AudioPattern>& patterns)
 	}
 }
 
+#define PROCEDURAL_BUFFER_SIZE 20480
+uint16_t proceduralSoundBuffer[PROCEDURAL_BUFFER_SIZE];
+const uint8_t soundDither[] =
+{
+	0, 128, 191, 64
+};
+
+int generateProceduralSound(
+	uint16_t* buffer,
+	size_t bufferLength,
+	uint16_t totalDuration,
+	uint16_t startFreq, uint16_t endFreq,
+	uint16_t noisiness, uint8_t startVol, uint8_t endVol)
+{
+	int frameSize = 4;
+	int totalFrames = totalDuration / frameSize;
+
+	if (totalFrames * 2 >= bufferLength)
+	{
+		totalFrames = bufferLength / 2 - 1;
+	}
+
+	int index = 0;
+
+	for (uint16_t i = 0; i < totalFrames; i++)
+	{
+		float t = (float)i / (float)totalFrames;
+		int32_t currentFreq = startFreq + (int32_t)((endFreq - startFreq) * t);
+
+		if (noisiness > 0)
+		{
+			currentFreq += (rand() % noisiness) - (noisiness / 2);
+			//currentFreq += random(-noisiness, noisiness + 1);
+		}
+
+		// Clamp frequency to Arduboy limits
+		if (currentFreq < 16) currentFreq = 16;
+		if (currentFreq > 32767) currentFreq = 32767;
+
+		uint8_t currentVol = startVol + (uint8_t)((endVol - startVol) * t);
+		uint16_t finalFreq = currentFreq;
+
+		if (currentVol < soundDither[i & 3])
+		{
+			finalFreq = 0;
+		}
+
+		buffer[index++] = finalFreq;
+		buffer[index++] = frameSize;
+	}
+
+	// Mandatory array terminator for ArduboyTones
+	buffer[index++] = TONES_END;
+
+	return index;
+}
+
+void writeProceduralSound(FILE* fs, const char* varName, uint16_t* buffer, int length)
+{
+	fprintf(fs, "const uint16_t %s[] PROGMEM = {\n\t", varName);
+
+	for (int n = 0; n < length; n++)
+	{
+		fprintf(fs, "0x%x", buffer[n]);
+
+		if (n < length - 1)
+		{
+			fprintf(fs, ",");
+		}
+	}
+
+	fprintf(fs, "\n};\n\n");
+}
+
+int main(int argc, char* argv[])
+{
+	FILE* fs = NULL;
+	const char* outputPath = "Soccer/Generated/Sounds.inc.h";
+
+	fopen_s(&fs, outputPath, "w");
+
+	if (fs)
+	{
+		int length;
+
+		// Kick
+		length = generateProceduralSound(proceduralSoundBuffer, PROCEDURAL_BUFFER_SIZE,
+			160, 180, 30, 0, 255, 128);
+
+		writeProceduralSound(fs, "Sounds::kick", proceduralSoundBuffer, length);
+
+		// Goal
+		length = generateProceduralSound(proceduralSoundBuffer, PROCEDURAL_BUFFER_SIZE,
+			500, 200, 450, 180, 0, 255) - 1;
+		length += generateProceduralSound(proceduralSoundBuffer + length, PROCEDURAL_BUFFER_SIZE,
+			2000, 450, 450, 180, 255, 255) - 1;
+		length += generateProceduralSound(proceduralSoundBuffer + length, PROCEDURAL_BUFFER_SIZE,
+			2000, 450, 450, 180, 255, 0);
+
+		writeProceduralSound(fs, "Sounds::goal", proceduralSoundBuffer, length);
+
+		fclose(fs);
+	}
+
+	return 0;
+}
 
 	
-int main(int argc, char* argv[])
+int mainOld(int argc, char* argv[])
 {
 	if(argc < 3)
 	{
