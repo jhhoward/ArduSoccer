@@ -1,3 +1,4 @@
+#include "Engine.h"
 #include "Ball.h"
 
 #define ITOFIX(x) ((x) << FIXED_SHIFT)
@@ -22,6 +23,7 @@ void Ball::update()
 		{
 			fixedY -= velocityY;
 			velocityY = -velocityY / 2;
+			Platform.playSound(Sounds::bounce);
 		}
 		if (wasInsideTopNet != isInsideTopNet())
 		{
@@ -47,6 +49,7 @@ void Ball::update()
 		{
 			fixedX -= velocityX;
 			velocityX = -velocityX / 2;
+			Platform.playSound(Sounds::bounce);
 		}
 		if (wasInsideTopNet != isInsideTopNet() || wasInsideBottomNet != isInsideBottomNet())
 		{
@@ -89,6 +92,11 @@ void Ball::update()
 		if (velocityZ < -(2 << FIXED_SHIFT))
 		{
 			velocityZ = -velocityZ / 2;
+
+			if (velocityZ > 20 && engine.match.state == Match::Playing)
+			{
+				Platform.playSound(Sounds::bounce);
+			}
 		}
 		else
 		{

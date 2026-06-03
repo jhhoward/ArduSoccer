@@ -36,7 +36,10 @@ class Sounds
 {
 public:
 	static const uint16_t kick[];
-	static const uint16_t goal[];
+	static const uint16_t largeKick[];
+	static const uint16_t bounce[];
+	static const uint16_t slide[];
+	static const uint16_t whistle[];
 };
 
 class Engine

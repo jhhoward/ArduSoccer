@@ -22,7 +22,7 @@ void Match::reset()
 
 void Match::onGoalScored(Team* team)
 {
-	//Platform.playSound(Sounds::goal);
+	Platform.playNoise();
 	team->score++;
 	setState(Match::Scored);
 	electedTeam = team;
@@ -97,6 +97,8 @@ void Match::update()
 			}
 			else if (engine.ball.y < PITCH_TOP)
 			{
+				Platform.playSound(Sounds::whistle);
+
 				if (engine.ball.lastOwner && engine.ball.lastOwner->getTeam() == getTeamAtTopHalf())
 				{
 					queueState(Match::Corner, getTeamAtBottomHalf());
@@ -108,6 +110,8 @@ void Match::update()
 			}
 			else if (engine.ball.y > PITCH_BOTTOM)
 			{
+				Platform.playSound(Sounds::whistle);
+
 				if (engine.ball.lastOwner && engine.ball.lastOwner->getTeam() == getTeamAtBottomHalf())
 				{
 					queueState(Match::Corner, getTeamAtTopHalf());
@@ -122,10 +126,12 @@ void Match::update()
 
 		if (matchHalf == FIRST_HALF && matchTimer > engine.settings.matchHalfLength * 60 * TARGET_FRAMERATE)
 		{
+			Platform.playSound(Sounds::whistle);
 			onHalfTime();
 		}
 		if (matchHalf == SECOND_HALF && matchTimer > engine.settings.matchHalfLength * 60 * TARGET_FRAMERATE * 2)
 		{
+			Platform.playSound(Sounds::whistle);
 			onMatchEnd();
 		}
 
@@ -134,6 +140,8 @@ void Match::update()
 	case Match::Scored:
 		if (timeInState > 30 * 5)
 		{
+			Platform.playNoiseOut();
+
 			if (electedTeam == &engine.teams[WHITE_TEAM])
 			{
 				setupKickOff(&engine.teams[BLACK_TEAM]);
@@ -150,6 +158,7 @@ void Match::update()
 	case Match::HalfTime:
 		if (timeInState > 30 * 5)
 		{
+			Platform.playSound(Sounds::whistle);
 			setupKickOff(&engine.teams[BLACK_TEAM]);
 			engine.renderer.showLargeMessage(PSTR("2ND HALF"));
 		}
@@ -159,6 +168,13 @@ void Match::update()
 		if (timeInState > 30 * 5)
 		{
 			reset();
+		}
+		break;
+
+	case Match::KickOff:
+		if (timeInState == 60)
+		{
+			Platform.playSound(Sounds::whistle);
 		}
 		break;
 

@@ -1,6 +1,59 @@
 #include "Engine.h"
 #include "MathsFunctions.h"
-#include "Generated/Sounds.inc.h"
+//#include "Generated/Sounds.inc.h"
+
+const uint16_t Sounds::kick[] PROGMEM = {
+	0xb4,20,
+	0x8f,20,
+	0x22,20,
+	0x8000
+};
+
+const uint16_t Sounds::largeKick[] PROGMEM = {
+	0xa4,40,
+	0x7f,40,
+	0x12,40,
+	0x8000
+};
+
+const uint16_t Sounds::bounce[] PROGMEM = {
+	0x94,10,
+	0x5f,10,
+	0x12,10,
+	0x8000
+};
+
+const uint16_t Sounds::slide[] PROGMEM = {
+	0x100,	25,
+	0x5f,	25,
+	0x90,	25,
+	0x5f,	25,
+	0x80,	25,
+	0x5f,	25,
+	0x70,	25,
+	0x5f,	25,
+	0x60,	25,
+	0x8000
+};
+
+const uint16_t Sounds::whistle[] PROGMEM = {
+	2500,10,
+	2650,10,
+	2500,10,
+	2650,10,
+	2500,10,
+	2650,10,
+	2500,10,
+	2650,10,
+	2500,10,
+	2650,10,
+	2650,10,
+	2500,10,
+	2650,10,
+	2500,10,
+	2650,10,
+	0x8000
+};
 
 Engine engine;
 

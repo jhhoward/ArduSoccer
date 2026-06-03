@@ -6,6 +6,7 @@
 #include "lodepng.h"
 
 #define TONES_END 0x8000
+#define TONES_REPEAT 0x8001
 
 SDLPlatform Platform;
 
@@ -90,6 +91,7 @@ int generateProceduralSound(
 
 void Play(const uint16_t* pattern)
 {
+	currentPatternBufferPos = 0;
 	currentAudioPattern = pattern;
 	currentPatternBufferPos = 0;
 }
@@ -199,6 +201,10 @@ void FillAudioBuffer(void* udata, uint8_t* stream, int len)
 				if (currentAudioPattern[currentPatternBufferPos] == TONES_END)
 				{
 					currentAudioPattern = nullptr;
+				}
+				else if (currentAudioPattern[currentPatternBufferPos] == TONES_REPEAT)
+				{
+					currentPatternBufferPos = 0;
 				}
 			}
 			else
@@ -391,7 +397,6 @@ void SDLPlatform::run()
 							break;
 
 						case SDLK_1:
-							Play(soundTest);
 							break;
 					}
 				break;

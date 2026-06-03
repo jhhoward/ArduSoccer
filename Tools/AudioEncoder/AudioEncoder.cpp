@@ -454,7 +454,7 @@ int generateProceduralSound(
 
 		if (currentVol < soundDither[i & 3])
 		{
-			finalFreq = 0;
+			//finalFreq = 0;
 		}
 
 		buffer[index++] = finalFreq;
@@ -502,13 +502,15 @@ int main(int argc, char* argv[])
 		writeProceduralSound(fs, "Sounds::kick", proceduralSoundBuffer, length);
 
 		// Goal
-		length = generateProceduralSound(proceduralSoundBuffer, PROCEDURAL_BUFFER_SIZE,
+		length += generateProceduralSound(proceduralSoundBuffer + length, PROCEDURAL_BUFFER_SIZE,
+			2000, 450, 450, 180, 255, 255) - 1;
+		/*length = generateProceduralSound(proceduralSoundBuffer, PROCEDURAL_BUFFER_SIZE,
 			500, 200, 450, 180, 0, 255) - 1;
 		length += generateProceduralSound(proceduralSoundBuffer + length, PROCEDURAL_BUFFER_SIZE,
 			2000, 450, 450, 180, 255, 255) - 1;
 		length += generateProceduralSound(proceduralSoundBuffer + length, PROCEDURAL_BUFFER_SIZE,
 			2000, 450, 450, 180, 255, 0);
-
+			*/
 		writeProceduralSound(fs, "Sounds::goal", proceduralSoundBuffer, length);
 
 		fclose(fs);

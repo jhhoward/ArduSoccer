@@ -223,7 +223,14 @@ void Person::kickBall(int velocityX, int velocityY, int velocityZ)
 
 	engine.match.onKick();
 
-	Platform.playSound(Sounds::kick);
+	if (velocityZ > 60)
+	{
+		Platform.playSound(Sounds::largeKick);
+	}
+	else
+	{
+		Platform.playSound(Sounds::kick);
+	}
 }
 
 void Person::update()
@@ -555,6 +562,7 @@ void Person::update()
 				animationFrame = 0;
 				state = Person::SlideTackle;
 				displayFrame = pgm_read_byte(&directionToSlideTackleFrame[direction]);
+				Platform.playSound(Sounds::slide);
 			}
 		}
 	}
@@ -743,6 +751,7 @@ void Person::update()
 					ballZ = z + 4;
 					deltaX *= 5;
 					deltaY *= 2;
+					engine.ball.velocityZ = 0;
 				}
 				else
 				{
