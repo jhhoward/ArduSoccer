@@ -78,6 +78,23 @@ void Team::calculateFormationPosition(uint8_t index, int16_t& outX, int16_t& out
 			formationOffsetY = -64;
 		}
 	}
+	else if (engine.match.state == Match::ThrowIn)
+	{
+		if (engine.match.electedKicker == &engine.people[index])
+		{
+			if (engine.ball.x < BACKGROUND_WIDTH / 2)
+			{
+				outX = engine.ball.x - 5;
+			}
+			else
+			{
+				outX = engine.ball.x + 5;
+			}
+
+			outY = engine.ball.y - 1;
+			return;
+		}
+	}
 	else if (engine.match.state == Match::Corner)
 	{
 		formationOffsetX = 0;

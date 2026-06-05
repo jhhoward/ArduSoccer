@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 3,
+  "title": "Ardusoccer",
+  "description": "A 5-a-side soccer game with single player vs CPU and 2 player multiplayer support via Serial Relay",
+  "author": "James Howard",
+  "version": "1.0",
+  "date": "2026-06-05",
+  "genre": "Sport",
+  "publisher": "",
+  "idea": "",
+  "code": "",
+  "art": "",
+  "sound": "",
+  "url": "https://github.com/jhhoward/ArduSoccer",
+  "sourceUrl": "https://github.com/jhhoward/ArduSoccer",
+  "email": "",
+  "companion": "",
+  "banner": "banner.png",
+  "screenshots": [
+    {
+      "title": "",
+      "filename": "screen1.png"
+    },
+    {
+      "title": "",
+      "filename": "screen2.png"
+    }
+  ],
+  "binaries": [
+    {
+      "title": "Ardusoccer",
+      "filename": "Arusoccer.hex",
+      "device": "Arduboy"
+    }
+  ],
+  "buttons": [
+    {
+      "control": "",
+      "action": ""
+    }
+  ]
+}

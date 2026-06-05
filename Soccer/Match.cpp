@@ -121,6 +121,14 @@ void Match::update()
 					queueState(Match::GoalKick, getTeamAtBottomHalf());
 				}
 			}
+			else if (engine.ball.x < PITCH_LEFT || engine.ball.x > PITCH_RIGHT)
+			{
+				Platform.playSound(Sounds::whistle);
+
+				Team* team = engine.ball.lastOwner != nullptr ? engine.ball.lastOwner->getTeam() : &engine.teams[WHITE_TEAM];
+				queueState(Match::ThrowIn, team);
+				throwInY = engine.ball.y;
+			}
 		}
 		matchTimer++;
 
@@ -188,6 +196,9 @@ void Match::update()
 				break;
 			case Match::Corner:
 				setupCorner(electedTeam);
+				break;
+			case Match::ThrowIn:
+				setupThrowIn(electedTeam);
 				break;
 			default:
 				setState(queuedState);
@@ -300,6 +311,27 @@ void Match::setupCorner(Team* team)
 
 	electedTeam = team;
 	electedKicker = &team->players[PLAYERS_PER_TEAM - 1];
+	teleportPlayersToFormationPositions();
+
+	electedKicker->takeBall();
+}
+
+void Match::setupThrowIn(Team* team)
+{
+	engine.renderer.showLargeMessage(PSTR("THROW IN"));
+
+	int throwInX = engine.ball.x < BACKGROUND_WIDTH / 2 ? PITCH_LEFT : PITCH_RIGHT;
+
+	engine.ball.setPosition(throwInX, throwInY);
+	setState(Match::ThrowIn);
+
+	electedTeam = team;
+
+	electedKicker = team->getClosestPlayer(throwInX, throwInY);
+	if (electedKicker->isGoalie())
+	{
+		electedKicker = &team->players[1];
+	}
 	teleportPlayersToFormationPositions();
 
 	electedKicker->takeBall();

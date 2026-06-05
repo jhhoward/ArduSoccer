@@ -212,6 +212,11 @@ bool Person::isOnScreen()
 
 void Person::kickBall(int velocityX, int velocityY, int velocityZ)
 {
+	if (engine.match.state == Match::ThrowIn)
+	{
+		velocityZ *= 2;
+	}
+
 	engine.ball.setOwner(nullptr);
 	engine.ball.velocityX = velocityX;
 	engine.ball.velocityY = velocityY;
@@ -540,10 +545,7 @@ void Person::update()
 			if (hasBall())
 			{
 				// Pass
-				int8_t deltaX = ((int8_t)pgm_read_byte(&directionToX[direction]));
-				int8_t deltaY = ((int8_t)pgm_read_byte(&directionToY[direction]));
-
-				tryPass();
+				tryPass(inputDirection != NoDirection ? inputDirection : direction);
 				//kickBall(deltaX * 50, deltaY * 50, 50);
 				return;
 			}
@@ -723,6 +725,19 @@ void Person::update()
 		if (getTeam()->controllerType != Team::ComputerPlayer)
 		{
 			getTeam()->selectedPlayer = this;
+		}
+
+		if (engine.match.state == Match::ThrowIn)
+		{
+			engine.ball.setPosition(engine.ball.x, engine.ball.y, 6);
+			if (engine.ball.x < BACKGROUND_WIDTH / 2)
+			{
+				direction = Direction::East;
+			}
+			else
+			{
+				direction = Direction::West;
+			}
 		}
 
 		if (engine.match.shouldAllowFreeMovement())
@@ -960,7 +975,7 @@ void Person::tryShoot()
 	}
 }
 
-void Person::tryPass()
+void Person::tryPass(uint8_t passDirection)
 {
 	Team* team = getTeam();
 	Person* target = nullptr;
@@ -977,7 +992,7 @@ void Person::tryPass()
 				{
 					// Check for the correct direction
 					uint8_t targetDirection = calculateFacingDirection(x, y, other->x, other->y);
-					if (direction != targetDirection)
+					if (passDirection != targetDirection)
 					{
 						continue;
 					}
@@ -986,7 +1001,7 @@ void Person::tryPass()
 				{
 					// Check for the almost the correct direction
 					uint8_t targetDirection = calculateFacingDirection(x, y, other->x, other->y);
-					int diff = targetDirection - direction;
+					int diff = targetDirection - passDirection;
 					if (diff < 0)
 						diff = -diff;
 					if (diff > 4)

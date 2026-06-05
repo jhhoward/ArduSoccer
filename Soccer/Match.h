@@ -40,6 +40,7 @@ public:
 	void setupKickOff(Team* team);	
 	void setupGoalKick(Team* team);
 	void setupCorner(Team* team);
+	void setupThrowIn(Team* team);
 	void teleportPlayersToFormationPositions();
 	void onKick();
 	void onGoalScored(Team* team);
@@ -63,6 +64,7 @@ public:
 
 	uint32_t matchTimer;
 	uint8_t matchHalf;
+	int16_t throwInY;
 	
 	char* printInt(char* buffer, uint8_t number, bool leadingZeroes = false);
 };

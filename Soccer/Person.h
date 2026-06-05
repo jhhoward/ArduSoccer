@@ -36,7 +36,7 @@ public:
 	void stun(uint8_t frames, bool shouldFall = false);
 	void kickBall(int velocityX, int velocityY, int velocityZ);
 	void goalieDive();
-	void tryPass();
+	void tryPass(uint8_t direction);
 	void tryShoot();
 	Team* getTeam();
 	void takeBall();
