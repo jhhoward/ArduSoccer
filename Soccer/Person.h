@@ -44,7 +44,7 @@ public:
 	bool isSelectedPlayer();
 	bool isHoldingBall() { return isGoalie() && hasBall() && isInOwnPenaltyBox(); }
 	bool hasBall();
-	bool isOnScreen();
+	bool isOnScreen(int margin = 0);
 	bool isGoalie() { return index == 0 || index == PLAYERS_PER_TEAM; }
 	bool isInOwnPenaltyBox();
 

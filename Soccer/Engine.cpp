@@ -1,5 +1,6 @@
 #include "Engine.h"
 #include "MathsFunctions.h"
+#include "ArduboyTonesPitches.h"
 //#include "Generated/Sounds.inc.h"
 
 const uint16_t Sounds::kick[] PROGMEM = {
@@ -54,6 +55,33 @@ const uint16_t Sounds::whistle[] PROGMEM = {
 	2650,10,
 	0x8000
 };
+
+const uint16_t Sounds::goal[] PROGMEM = {
+  NOTE_C5, 120,   
+  NOTE_F5, 120,   
+  NOTE_A5, 120,   
+  NOTE_C6, 120,   
+  NOTE_REST, 30,  
+  NOTE_F6, 400,   
+  0x8000
+};
+
+const uint16_t Sounds::win[] PROGMEM = {
+  NOTE_C5, 60, NOTE_C5, 60,
+  NOTE_F5, 60, NOTE_F5, 60,
+  NOTE_A5, 60, NOTE_A5, 60,
+  NOTE_C6, 400,
+  0x8000
+};
+
+const uint16_t Sounds::lose[] PROGMEM = {
+  NOTE_DS4, 180,
+  NOTE_D4,  180,
+  NOTE_CS4, 180,
+  NOTE_C4,  500, 
+  0x8000
+};
+
 
 Engine engine;
 

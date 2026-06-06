@@ -22,7 +22,7 @@ void Match::reset()
 
 void Match::onGoalScored(Team* team)
 {
-	Platform.playNoise();
+	Platform.playSound(Sounds::goal);
 	team->score++;
 	setState(Match::Scored);
 	electedTeam = team;
@@ -58,10 +58,12 @@ void Match::onMatchEnd()
 		if (engine.teams[winningTeam].controllerType == Team::LocalPlayer)
 		{
 			engine.renderer.showLargeMessage(PSTR("YOU WIN!"));
+			Platform.playSound(Sounds::win);
 		}
 		else
 		{
 			engine.renderer.showLargeMessage(PSTR("YOU LOSE!"));
+			Platform.playSound(Sounds::lose);
 		}
 	}
 }
@@ -125,7 +127,7 @@ void Match::update()
 			{
 				Platform.playSound(Sounds::whistle);
 
-				Team* team = engine.ball.lastOwner != nullptr ? engine.ball.lastOwner->getTeam() : &engine.teams[WHITE_TEAM];
+				Team* team = engine.ball.lastOwner != nullptr && engine.ball.lastOwner->team == WHITE_TEAM ? &engine.teams[BLACK_TEAM] : &engine.teams[WHITE_TEAM];
 				queueState(Match::ThrowIn, team);
 				throwInY = engine.ball.y;
 			}
@@ -148,8 +150,6 @@ void Match::update()
 	case Match::Scored:
 		if (timeInState > 30 * 5)
 		{
-			Platform.playNoiseOut();
-
 			if (electedTeam == &engine.teams[WHITE_TEAM])
 			{
 				setupKickOff(&engine.teams[BLACK_TEAM]);

@@ -80,6 +80,16 @@ void Team::calculateFormationPosition(uint8_t index, int16_t& outX, int16_t& out
 	}
 	else if (engine.match.state == Match::ThrowIn)
 	{
+		if (engine.ball.x < BACKGROUND_WIDTH / 2)
+		{
+			formationOffsetX = -MAX_FORMATION_OFFSET_X;
+		}
+		else
+		{
+			formationOffsetX = MAX_FORMATION_OFFSET_X;
+		}
+		formationOffsetY = engine.ball.y - CENTER_MARK_Y;
+
 		if (engine.match.electedKicker == &engine.people[index])
 		{
 			if (engine.ball.x < BACKGROUND_WIDTH / 2)
@@ -280,7 +290,16 @@ void Team::calculateCycleSelectedPlayer()
 		for (int n = 0; n < PLAYERS_PER_TEAM; n++)
 		{
 			Person& person = players[n];
-			if (selectedPlayer != &person && !person.isGoalie() && (person.isOnScreen() || pass == 1))
+
+			if (pass == 0)
+			{
+				if (selectedPlayer == &person)
+					continue;
+				if (!person.isOnScreen())
+					continue;
+			}
+
+			if (!person.isGoalie())
 			{
 				int distance = estimateDistance(engine.ball.x, engine.ball.y, person.x, person.y);
 

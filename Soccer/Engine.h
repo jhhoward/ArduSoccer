@@ -30,6 +30,7 @@ struct Camera
 struct GameSettings
 {
 	uint8_t matchHalfLength;
+	uint8_t difficulty;
 };
 
 class Sounds
@@ -40,6 +41,9 @@ public:
 	static const uint16_t bounce[];
 	static const uint16_t slide[];
 	static const uint16_t whistle[];
+	static const uint16_t goal[];
+	static const uint16_t win[];
+	static const uint16_t lose[];
 };
 
 class Engine

@@ -14,10 +14,12 @@ typedef void (*MenuFn)(void);
 
 const char Str_SinglePlayer[] PROGMEM = "PLAY MATCH";
 const char Str_Multiplayer[] PROGMEM = "MULTIPLAYER";
-const char Str_Demo[] PROGMEM = "DEMO";
+//const char Str_Demo[] PROGMEM = "DEMO";
 const char Str_SerialRelay[] PROGMEM = "SERIAL RELAY"; 
-const char Str_SoundOn[] PROGMEM = "SOUND FX: ON";
-const char Str_SoundOff[] PROGMEM = "SOUND FX: OFF";
+const char Str_SoundOn[] PROGMEM = "SOUND FX:ON";
+const char Str_SoundOff[] PROGMEM = "SOUND FX:OFF";
+const char Str_Easy[] PROGMEM = "DIFFICULTY:NORMAL";
+const char Str_Hard[] PROGMEM = "DIFFICULTY:HARD";
 
 #if WITH_LINK_CABLE
 const char Str_LinkCable[] PROGMEM = "FX-C LINK CABLE";
@@ -30,9 +32,10 @@ const char Str_Join[] PROGMEM = "JOIN GAME";
 const void* const Menu_Main[] PROGMEM =
 {
 	Str_SinglePlayer,		MENU_CALLBACK(&Menu::startSinglePlayer),
+	Str_Easy,				MENU_CALLBACK(&Menu::toggleDifficulty),
 	Str_SoundOn,			MENU_CALLBACK(&Menu::toggleSound),
 	Str_Multiplayer,		MENU_CALLBACK(&Menu::openMultiplayerMenu),
-	Str_Demo,				MENU_CALLBACK(&Menu::startDemo),
+	//Str_Demo,				MENU_CALLBACK(&Menu::startDemo),
 	MENU_ENTRY_END
 };
 
@@ -79,6 +82,10 @@ void Menu::draw()
 		if (text == Str_SoundOn && Platform.isMuted())
 		{
 			text = Str_SoundOff;
+		}
+		if (text == Str_Easy && engine.settings.difficulty)
+		{
+			text = Str_Hard;
 		}
 
 		if (item == currentSelection)
@@ -208,4 +215,9 @@ void Menu::connectLinkCable()
 void Menu::toggleSound()
 {
 	Platform.setMuted(!Platform.isMuted());
+}
+
+void Menu::toggleDifficulty()
+{
+	engine.settings.difficulty = !engine.settings.difficulty;
 }

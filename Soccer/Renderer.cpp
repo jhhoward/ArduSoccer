@@ -276,21 +276,18 @@ void Renderer::drawPerson(int index)
 		return;
 
 	const uint8_t* sprite;
-	const uint8_t* mask;
+	const uint8_t* mask = playerSpriteMask;
 
 	switch (person.team)
 	{
 	case 0:
 		sprite = whitePlayerSprite;
-		mask = whitePlayerSpriteMask;
 		break;
 	case 1:
 		sprite = blackPlayerSprite;
-		mask = blackPlayerSpriteMask;
 		break;
 	default:
 		sprite = refereeSprite;
-		mask = refereeSpriteMask;
 		break;
 	}
 

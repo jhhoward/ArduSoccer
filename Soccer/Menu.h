@@ -29,6 +29,7 @@ public:
 	static void connectSerial();
 	static void connectLinkCable();
 	static void toggleSound();
+	static void toggleDifficulty();
 };
 
 #endif

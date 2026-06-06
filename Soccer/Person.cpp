@@ -2,6 +2,8 @@
 #include "Person.h"
 #include "MathsFunctions.h"
 
+#define ENABLE_AI_PLAYER 1
+
 const int16_t startingPositions[] PROGMEM =
 {
 	128, 35,
@@ -161,6 +163,42 @@ const uint8_t goalieDiveZ[] PROGMEM =
 	0
 };
 
+struct DifficultySettings
+{
+	uint8_t tackleDelay;
+	uint8_t chaseBallDelay;
+	uint8_t applyPressureDelay;
+	uint8_t pressureDistance;
+};
+
+const DifficultySettings difficultySettings[] PROGMEM =
+{
+	// Easy
+	{
+		// Tackle delay
+		60,
+		// Chase ball delay
+		45,
+		// Apply pressure delay
+		90,
+		// Pressure distance
+		50,
+	},
+
+	// Hard
+	{
+		// Tackle delay
+		15,
+		// Chase ball delay
+		0,
+		// Apply pressure delay
+		30,
+		// Pressure distance
+		40,
+	}
+};
+
+
 int8_t Person::ballDeltaX;
 int8_t Person::ballDeltaY;
 
@@ -202,16 +240,21 @@ void Person::stun(uint8_t frames, bool shouldFall)
 	}
 }
 
-bool Person::isOnScreen()
+bool Person::isOnScreen(int margin)
 {
 	int displayX = x - engine.camera.x;
 	int displayY = y - engine.camera.y;
 
-	return displayX >= -4 && displayY >= 0 && displayX < DISPLAYWIDTH + 4 && displayY < DISPLAYHEIGHT + 16;
+	return displayX >= -4 - margin && displayY >= -margin && displayX < DISPLAYWIDTH + 4 + margin && displayY < DISPLAYHEIGHT + 16 + margin;
 }
 
 void Person::kickBall(int velocityX, int velocityY, int velocityZ)
 {
+	if (!engine.match.shouldAllowKicking())
+	{
+		return;
+	}
+
 	if (engine.match.state == Match::ThrowIn)
 	{
 		velocityZ *= 2;
@@ -254,6 +297,8 @@ void Person::update()
 	}
 
 	bool canControl = state == Person::Standing || state == Person::Walking;
+	bool movementAllowed = engine.match.shouldAllowFreeMovement();
+	uint8_t teamDifficulty = team != REFEREE_TEAM && getTeam()->controllerType == Team::ComputerPlayer ? engine.settings.difficulty : 1;
 
 	if (canControl)
 	{
@@ -270,27 +315,17 @@ void Person::update()
 				input = Platform.readInput(REMOTE_PLAYER);
 			}
 
-			if (!engine.match.shouldAllowFreeMovement())
-			{
-				input &= ~0xf;
-			}
-
-			if (!engine.match.shouldAllowKicking())
-			{
-				input = 0;
-			}
-
 			if (!hasBall())
 			{
 				bool swapBecauseOffScreen = false;
 
-				if (!isOnScreen())
+				if (!isOnScreen(8))
 				{
 					// Check if any other players on the team are on screen instead
 					for (int n = 0; n < NUM_PEOPLE; n++)
 					{
 						Person& other = engine.people[n];
-						if (other.team == team && other.isOnScreen())
+						if (&other != this && other.team == team && other.isOnScreen() && !other.isGoalie())
 						{
 							swapBecauseOffScreen = true;
 							break;
@@ -349,6 +384,8 @@ void Person::update()
 
 					*/
 
+					movementAllowed = true;
+
 					if (engine.match.electedKicker == this)
 					{
 						if (getTeam()->isTopHalf())
@@ -378,7 +415,7 @@ void Person::update()
 			}
 			else
 			{
-				if (!isSelectedPlayer())
+				if (!isSelectedPlayer() && ENABLE_AI_PLAYER)
 				{
 					// Follow formation
 					{
@@ -396,7 +433,7 @@ void Person::update()
 
 					if (hasBall())
 					{
-						if (engine.match.shouldAllowFreeMovement())
+						if (movementAllowed)
 						{
 							if (isGoalie())
 							{
@@ -417,7 +454,6 @@ void Person::update()
 								int goalY = getTeam()->isTopHalf() ? PITCH_BOTTOM : PITCH_TOP;
 
 								inputDirection = calculateFacingDirection(x, y, goalX, goalY);
-
 								inputDirection = getAvoidDirection(inputDirection);
 
 								if (estimateDistance(x, y, goalX, goalY) < 48)
@@ -447,14 +483,42 @@ void Person::update()
 						{
 							int estimatedBallDistance = estimateDistance(x, y, engine.ball.x, engine.ball.y);
 							bool otherTeamHasBall = engine.ball.owner && engine.ball.owner->team != team;
+							bool isClosestPlayer = getTeam()->getClosestPlayer(engine.ball.x, engine.ball.y) == this;
 
-							if (getTeam()->getClosestPlayer(engine.ball.x, engine.ball.y) == this || (estimatedBallDistance < 40 && otherTeamHasBall))
+							if (otherTeamHasBall)
+							{
+								uint8_t chaseDelay = pgm_read_byte(&difficultySettings[teamDifficulty].chaseBallDelay);
+
+								if (engine.ball.ownerTimer < chaseDelay)
+								{
+									shouldChaseBall = false;
+								}
+								else if (!isClosestPlayer)
+								{
+									uint8_t applyPressureDelay = pgm_read_byte(&difficultySettings[teamDifficulty].applyPressureDelay);
+									uint8_t pressureDistance = pgm_read_byte(&difficultySettings[teamDifficulty].pressureDistance);
+									if (engine.ball.ownerTimer < applyPressureDelay || estimatedBallDistance > pressureDistance)
+									{
+										shouldChaseBall = false;
+									}
+								}
+							}
+							else
+							{
+								if (!isClosestPlayer)
+								{
+									shouldChaseBall = false;
+								}
+							}
+
+							if (shouldChaseBall)
 							{
 								inputDirection = calculateFacingDirection(x, y, engine.ball.x, engine.ball.y);
 
 								if (otherTeamHasBall)
 								{
-									bool autoSlideTackle = engine.ball.ownerTimer > 15;
+									uint8_t tackleDelay = pgm_read_byte(&difficultySettings[engine.settings.difficulty].tackleDelay);
+									bool autoSlideTackle = engine.ball.ownerTimer > tackleDelay;
 
 									if (estimatedBallDistance < 10 && (autoSlideTackle || isGoalie()))
 									{
@@ -469,7 +533,7 @@ void Person::update()
 			}
 		}
 
-		if (inputDirection != NoDirection)
+		if (inputDirection != NoDirection && movementAllowed)
 		{
 			state = Person::Walking;
 
@@ -518,24 +582,7 @@ void Person::update()
 			// Check if the goalie needs to dive
 			if (isGoalie() && engine.ball.owner == nullptr)
 			{
-				if ((engine.ball.x < x - PERSON_HALF_WIDTH || engine.ball.x > x + PERSON_HALF_WIDTH)
-					&& engine.ball.x > LEFT_POST_X1 - PERSON_HALF_WIDTH && engine.ball.x < RIGHT_POST_X2 + PERSON_HALF_WIDTH)
-				{
-					if (getTeam()->isTopHalf())
-					{
-						if (engine.ball.y < PITCH_TOP + 32 && engine.ball.velocityY < -16)
-						{
-							goalieDive();
-						}
-					}
-					else
-					{
-						if (engine.ball.y > PITCH_BOTTOM - 32 && engine.ball.velocityY > 16)
-						{
-							goalieDive();
-						}
-					}
-				}
+				goalieDive();
 			}
 		}
 
@@ -903,22 +950,63 @@ bool Person::isColliding()
 
 void Person::goalieDive()
 {
+	int goalLine;
+
+	if (state == Person::DiveLeft || state == Person::DiveRight)
+	{
+		// Already diving
+		return;
+	}
+
 	if (getTeam()->isTopHalf())
 	{
 		direction = South;
+		goalLine = (PITCH_TOP << FIXED_SHIFT);
+
+		if (engine.ball.y > PITCH_TOP + 32 || engine.ball.velocityY > -16)
+		{
+			// No need to dive
+			return;
+		}
 	}
 	else
 	{
 		direction = North;
+		goalLine = (PITCH_BOTTOM << FIXED_SHIFT);
+
+		if (engine.ball.y < PITCH_BOTTOM - 32 || engine.ball.velocityY < 16)
+		{
+			// No need to dive
+			return;
+		}
 	}
 
-	if (engine.ball.x < x)
+	int time = (goalLine - engine.ball.fixedY) / engine.ball.velocityY;
+	int predictedX = engine.ball.x + ((time * engine.ball.velocityX) >> FIXED_SHIFT);
+
+	if (predictedX < LEFT_POST_X1 - PERSON_HALF_WIDTH || predictedX > RIGHT_POST_X2 + PERSON_HALF_WIDTH)
+	{
+		// No need to dive
+		return;
+	}
+
+	if (predictedX < x - PERSON_HALF_WIDTH)
 	{
 		state = Person::DiveLeft;
 	}
-	else
+	else if (predictedX > x + PERSON_HALF_WIDTH)
 	{
 		state = Person::DiveRight;
+	}
+	else if (predictedX < x)
+	{
+		direction = West;
+		state = Person::Walking;
+	}
+	else if (predictedX > x)
+	{
+		direction = East;
+		state = Person::Walking;
 	}
 
 	animationFrame = 0;

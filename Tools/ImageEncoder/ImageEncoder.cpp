@@ -584,6 +584,8 @@ void EncodeBitmap(FILE* fs, const char* imagePath, const char* varName, bool out
 		}
 
 		fprintf(fs, "\n};\n");
+
+		printf("%s size: %d bytes\n", varName, width * height / 8);
 	}
 	else
 	{
@@ -702,6 +704,8 @@ void EncodeBackground(FILE* fs, const char* imagePath)
 		}
 		fprintf(fs, "};\n\n");
 
+		printf("Number of tiles: %d = %d bytes\n", tiles.size(), tiles.size() * BYTES_PER_TILE);
+
 		fprintf(fs, "const uint8_t bgTileMap[] PROGMEM = {\n\t");
 		for (int t = 0; t < tileMap.size(); t++)
 		{
@@ -712,6 +716,8 @@ void EncodeBackground(FILE* fs, const char* imagePath)
 			}
 		}
 		fprintf(fs, "};\n\n");
+
+		printf("Tile map size: %d\n", tileMap.size());
 	}
 	else
 	{
@@ -798,10 +804,15 @@ int main(int argc, char* argv[])
 	{
 		EncodeBackground(fs, "Assets/pitch.png");
 
-		EncodeBitmapWithMask(fs, "Assets/whitePlayer.png", "whitePlayerSprite", "whitePlayerSpriteMask");
-		EncodeBitmapWithMask(fs, "Assets/blackPlayer.png", "blackPlayerSprite", "blackPlayerSpriteMask");
+		EncodeBitmap(fs, "Assets/whitePlayer.png", "playerSpriteMask", true);
+		
+		EncodeBitmap(fs, "Assets/whitePlayer.png", "whitePlayerSprite");
+		EncodeBitmap(fs, "Assets/blackPlayer.png", "blackPlayerSprite");
+		EncodeBitmap(fs, "Assets/referee.png", "refereeSprite");
+		//EncodeBitmapWithMask(fs, "Assets/whitePlayer.png", "whitePlayerSprite", "whitePlayerSpriteMask");
+		//EncodeBitmapWithMask(fs, "Assets/blackPlayer.png", "blackPlayerSprite", "blackPlayerSpriteMask");
+		//EncodeBitmapWithMask(fs, "Assets/referee.png", "refereeSprite", "refereeSpriteMask");
 
-		EncodeBitmapWithMask(fs, "Assets/referee.png", "refereeSprite", "refereeSpriteMask");
 		EncodeBitmapWithMask(fs, "Assets/ball.png", "ballSprite", "ballSpriteMask");
 
 		EncodeBitmapWithMask(fs, "Assets/upperGoal.png", "upperGoalSprite", "upperGoalSpriteMask");
