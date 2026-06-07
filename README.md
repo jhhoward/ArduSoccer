@@ -1,11 +1,20 @@
-# Ardusoccer
+# ArduSoccer
 
 ![Demo](Assets/demo.gif)
 
-Ardusoccer is a 5-a-side soccer game for the [Arduboy](https://www.arduboy.com). You can play against a computer opponent, or if you have 2 Arduboys you can play multiplayer.
+ArduSoccer is a 5-a-side soccer game for the [Arduboy](https://www.arduboy.com). You can play against a computer opponent, or if you have 2 Arduboys you can play multiplayer.
+
+## Controls
+When your player has the ball:
+* A: Pass to another player
+* B: Shoot in the direction the player is facing
+
+When your player doesn't have the ball:
+* A: Select a different player
+* B: Tackle
 
 ## Multiplayer instructions
-To play Ardusoccer in multiplayer mode you will need two Arduboys with the game installed and a computer to connect them to. You can use the computer to act as a bridge to help the two Arduboys communicate.
+To play ArduSoccer in multiplayer mode you will need two Arduboys with the game installed and a computer to connect them to. You can use the computer to act as a bridge to help the two Arduboys communicate.
 
 * Connect the Arduboys to your computer's USB ports and switch them on
 * On your computer's browser go to https://jhhoward.github.io/SerialRelay/
