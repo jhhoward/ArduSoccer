@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "title": "Ardusoccer",
+  "title": "ArduSoccer",
   "description": "A 5-a-side soccer game with single player vs CPU and 2 player multiplayer support via Serial Relay",
   "author": "James Howard",
   "version": "1.0",
@@ -28,8 +28,8 @@
   ],
   "binaries": [
     {
-      "title": "Ardusoccer",
-      "filename": "Arusoccer.hex",
+      "title": "ArduSoccer",
+      "filename": "AruSoccer.hex",
       "device": "Arduboy"
     }
   ],
