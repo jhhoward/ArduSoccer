@@ -4,6 +4,8 @@
 
 ArduSoccer is a 5-a-side soccer game for the [Arduboy](https://www.arduboy.com). You can play against a computer opponent, or if you have 2 Arduboys you can play multiplayer.
 
+Download the latest package from the [releases page](https://github.com/jhhoward/ArduSoccer/releases). You can also [play in your browser using the Ardens emulator](https://tiberiusbrown.github.io/Ardens/player.html?blah=https://raw.githubusercontent.com/jhhoward/ArduSoccer/refs/heads/master/Package/ArduSoccer.hex)
+
 ## Controls
 When your player has the ball:
 * A: Pass to another player
