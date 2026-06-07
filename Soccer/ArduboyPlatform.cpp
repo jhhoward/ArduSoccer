@@ -197,6 +197,11 @@ void ArduboyPlatform::parseNetwork()
 	}
 }
 
+void ArduboyPlatform::disconnectMultiplayer()
+{
+	Serial.end();
+	connectionStatus = ConnectionStatus::Disconnected;
+}
 
 bool ArduboyPlatform::connectMultiplayer()
 {
@@ -207,6 +212,7 @@ bool ArduboyPlatform::connectMultiplayer()
 	
 	networkFrame = 0;
 	isWaitingForRemote = false;
+	connectionStatus = ConnectionStatus::Disconnected;
 
 	sendNetworkPacket(SYNC_PACKET, hostId);
 

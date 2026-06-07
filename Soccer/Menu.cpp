@@ -58,6 +58,7 @@ const void* const Menu_LinkCableMultiplayer[] PROGMEM =
 void Menu::init()
 {
 	currentMenu = Menu_Main;
+	currentSelection = 0;
 }
 
 void Menu::draw()
@@ -91,7 +92,6 @@ void Menu::draw()
 		if (item == currentSelection)
 		{
 			drawBitmap(3, y, menuBallSprite, 8, 8, 1);
-			//engine.renderer.drawText(smallFont, PSTR(">"), 1, y, 1);
 		}
 
 		engine.renderer.drawText(smallFont, text, x, y, 1);

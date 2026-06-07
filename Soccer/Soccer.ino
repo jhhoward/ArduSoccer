@@ -16,12 +16,12 @@ void ArduboyPlatform::playSound(const uint16_t* pattern)
 
 void setup() {
 	arduboy.boot();
-	//arduboy.flashlight();
+	arduboy.flashlight();
 	//arduboy.systemButtons();
 	//arduboy.bootLogo();
 	arduboy.setFrameRate(TARGET_FRAMERATE);
 	arduboy.audio.begin();
-	arduboy.audio.on();
+	arduboy.waitNoButtons();
 
 	engine.init();
 }

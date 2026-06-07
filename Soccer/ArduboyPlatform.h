@@ -28,9 +28,8 @@ class ArduboyPlatform : public PlatformBase
 {
 public:
 	void playSound(const uint16_t* sound);
-	void playNoise();
-	void playNoiseOut();
 	bool connectMultiplayer();
+	void disconnectMultiplayer();
 
 	void update();
 	void sendNetworkPacket(uint8_t packetType, uint8_t data = 0);

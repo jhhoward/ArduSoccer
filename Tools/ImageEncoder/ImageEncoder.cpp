@@ -731,7 +731,7 @@ void EncodeBitmapWithMask(FILE* fs, const char* inputPath, const char* varName, 
 	EncodeBitmap(fs, inputPath, maskName, true);
 }
 
-void EncodeBitmapFont(FILE* fs, const char* imagePath, const char* varName, int charWidth, int charHeight)
+void EncodeBitmapFont(FILE* fs, const char* imagePath, const char* varName, int charWidth, int charHeight, int charWidthSpacing)
 {
 	vector<uint8_t> image;
 	unsigned width, height;
@@ -748,7 +748,7 @@ void EncodeBitmapFont(FILE* fs, const char* imagePath, const char* varName, int 
 
 	if (!error)
 	{
-		int charsX = width / charWidth;
+		int charsX = width / charWidthSpacing;
 		int charsY = height / charHeight;
 
 		fprintf(fs, "const uint8_t %s[] PROGMEM = {\n\t", varName);
@@ -765,7 +765,7 @@ void EncodeBitmapFont(FILE* fs, const char* imagePath, const char* varName, int 
 
 						for (int n = 0; n < 8; n++)
 						{
-							int index = ((cy * charHeight + j + n) * width + cx * charWidth + i) * 4;
+							int index = ((cy * charHeight + j + n) * width + cx * charWidthSpacing + i) * 4;
 
 							if (image[index] > 128)
 							{
@@ -822,8 +822,8 @@ int main(int argc, char* argv[])
 
 		//EncodeBitmapFont(fs, "Assets/largeFont.png", "largeFontData", 16, 16);
 		//EncodeBitmapFont(fs, "Assets/smallFont.png", "smallFontData", 8, 8);
-		EncodeBitmapFont(fs, "Assets/largeFontReduced.png", "largeFontData", 16, 16);
-		EncodeBitmapFont(fs, "Assets/smallFontReduced.png", "smallFontData", 8, 8);
+		EncodeBitmapFont(fs, "Assets/largeFontReduced.png", "largeFontData", 15, 16, 16);
+		EncodeBitmapFont(fs, "Assets/smallFontReduced.png", "smallFontData", 5, 8, 6);
 
 		fclose(fs);
 	}

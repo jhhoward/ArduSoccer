@@ -4,8 +4,8 @@
 #include "Renderer.h"
 #include "Generated/Pitch.inc.h"
 
-const Font smallFont PROGMEM = { smallFontData, 6, 8, 6, 6 };
-const Font largeFont PROGMEM = { largeFontData, 16, 16, 15, 6 };
+const Font smallFont PROGMEM = { smallFontData, 5, 8, 6, 6 };
+const Font largeFont PROGMEM = { largeFontData, 15, 16, 15, 6 };
 
 Renderer::Renderer() 
 {

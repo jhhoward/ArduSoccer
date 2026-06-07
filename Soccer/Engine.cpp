@@ -290,3 +290,9 @@ void Engine::draw()
 	}
 }
 
+void Engine::returnToMenu()
+{
+	Platform.disconnectMultiplayer();
+	menu.init();
+	gameState = GameState_Menu;
+}

@@ -53,6 +53,8 @@ public:
 	void update();
 	void draw();
 
+	void returnToMenu();
+
 	void startSinglePlayer();
 	void startMultiplayer(bool isHost);
 	void startDemo();

@@ -250,11 +250,6 @@ bool Person::isOnScreen(int margin)
 
 void Person::kickBall(int velocityX, int velocityY, int velocityZ)
 {
-	if (!engine.match.shouldAllowKicking())
-	{
-		return;
-	}
-
 	if (engine.match.state == Match::ThrowIn)
 	{
 		velocityZ *= 2;
@@ -450,20 +445,36 @@ void Person::update()
 							}
 							else
 							{
+								// Run towards the goal
 								int goalX = BACKGROUND_WIDTH / 2;
 								int goalY = getTeam()->isTopHalf() ? PITCH_BOTTOM : PITCH_TOP;
 
 								inputDirection = calculateFacingDirection(x, y, goalX, goalY);
-								inputDirection = getAvoidDirection(inputDirection);
 
+								// Try shoot
 								if (estimateDistance(x, y, goalX, goalY) < 48)
 								{
 									input |= Input_Btn_B;
 								}
-
-								if (engine.ball.ownerTimer > 60)
+								else
 								{
-									input |= Input_Btn_A;
+									// Run down a wing
+									if (x > BACKGROUND_WIDTH / 4 && x < 3 * BACKGROUND_WIDTH / 4 && y > BACKGROUND_HEIGHT / 4 && y < 3 * BACKGROUND_HEIGHT / 4)
+									{
+										if (index & 1)
+											inputDirection ++;
+										else
+											inputDirection --;
+										inputDirection &= 7;
+									}
+
+									inputDirection = getAvoidDirection(inputDirection);
+
+									// Pass the ball if we have had it too long
+									if (engine.ball.ownerTimer > 60)
+									{
+										input |= Input_Btn_A;
+									}
 								}
 							}
 						}
@@ -586,32 +597,34 @@ void Person::update()
 			}
 		}
 
-
-		if (input & Input_Btn_A)
+		if (engine.match.shouldAllowKicking())
 		{
-			if (hasBall())
+			if (input & Input_Btn_A)
 			{
-				// Pass
-				tryPass(inputDirection != NoDirection ? inputDirection : direction);
-				//kickBall(deltaX * 50, deltaY * 50, 50);
-				return;
+				if (hasBall())
+				{
+					// Pass
+					tryPass(inputDirection != NoDirection ? inputDirection : direction);
+					//kickBall(deltaX * 50, deltaY * 50, 50);
+					return;
+				}
 			}
-		}
-		if (input & Input_Btn_B)
-		{
-			if (hasBall())
+			if (input & Input_Btn_B)
 			{
-				// Shoot
-				tryShoot();
-				return;
-			}
-			else
-			{
-				// Slide tackle
-				animationFrame = 0;
-				state = Person::SlideTackle;
-				displayFrame = pgm_read_byte(&directionToSlideTackleFrame[direction]);
-				Platform.playSound(Sounds::slide);
+				if (hasBall())
+				{
+					// Shoot
+					tryShoot();
+					return;
+				}
+				else
+				{
+					// Slide tackle
+					animationFrame = 0;
+					state = Person::SlideTackle;
+					displayFrame = pgm_read_byte(&directionToSlideTackleFrame[direction]);
+					Platform.playSound(Sounds::slide);
+				}
 			}
 		}
 	}
@@ -930,7 +943,7 @@ bool Person::isColliding()
 		return true;
 
 	// Person can collide with another person if one of them has the ball
-	for (int n = 0; n < NUM_PEOPLE; n++)
+	/*for (int n = 0; n < NUM_PEOPLE; n++)
 	{
 		Person& other = engine.people[n];
 		if (&other != this && other.state != Person::Fallen)
@@ -943,7 +956,7 @@ bool Person::isColliding()
 				}
 			}
 		}
-	}
+	}*/
 
 	return false;
 }

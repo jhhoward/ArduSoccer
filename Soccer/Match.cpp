@@ -175,7 +175,7 @@ void Match::update()
 	case Match::MatchEnd:
 		if (timeInState > 30 * 5)
 		{
-			reset();
+			engine.returnToMenu();
 		}
 		break;
 
