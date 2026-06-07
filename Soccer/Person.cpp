@@ -4,23 +4,6 @@
 
 #define ENABLE_AI_PLAYER 1
 
-const int16_t startingPositions[] PROGMEM =
-{
-	128, 35,
-	128, 86,
-	64, 112,
-	148, 151,
-	128, 155,
-
-	128, 282,
-	128, 232,
-	64, 209,
-	192, 209,
-	128, 189,
-
-	75, 148
-};
-
 enum FrameNames
 {
 	SOUTH_STAND = 0,
@@ -205,8 +188,6 @@ int8_t Person::ballDeltaY;
 void Person::init(uint8_t startIndex)
 {
 	index = startIndex;
-	x = pgm_read_word(&startingPositions[startIndex * 2]);
-	y = pgm_read_word(&startingPositions[startIndex * 2 + 1]);
 	animation = 0;
 	state = Person::Standing;
 	if (index < PLAYERS_PER_TEAM)
