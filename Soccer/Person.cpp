@@ -278,64 +278,54 @@ void Person::kickBall(int velocityX, int velocityY, int velocityZ)
 
 void Person::update()
 {
-	if (state == Person::Stunned || state == Person::Fallen)
+	bool movementAllowed = engine.match.shouldAllowFreeMovement();
+	uint8_t teamDifficulty = team != REFEREE_TEAM && getTeam()->controllerType == Team::ComputerPlayer ? engine.settings.difficulty : 1;
+	uint8_t input = 0;
+	uint8_t inputDown = 0;
+
+	if (isSelectedPlayer())
 	{
-		if (animationFrame == 0)
+		if (getTeam()->controllerType == Team::LocalPlayer)
 		{
-			if (!isColliding())
+			input = Platform.readInput(LOCAL_PLAYER);
+			inputDown = Platform.readInputDown(LOCAL_PLAYER);
+		}
+		else if (getTeam()->controllerType == Team::RemotePlayer)
+		{
+			input = Platform.readInput(REMOTE_PLAYER);
+			inputDown = Platform.readInputDown(REMOTE_PLAYER);
+		}
+
+		if (!hasBall())
+		{
+			bool swapBecauseOffScreen = false;
+
+			if (!isOnScreen(8))
 			{
-				state = Person::Standing;
+				// Check if any other players on the team are on screen instead
+				for (int n = 0; n < NUM_PEOPLE; n++)
+				{
+					Person& other = engine.people[n];
+					if (&other != this && other.team == team && other.isOnScreen() && !other.isGoalie())
+					{
+						swapBecauseOffScreen = true;
+						break;
+					}
+				}
+			}
+
+			if (swapBecauseOffScreen || (inputDown & Input_Btn_A))
+			{
+				// Swap selected player if pressing A or off screen
+				getTeam()->cycleSelectedPlayer();
 			}
 		}
-		else animationFrame--;
-		return;
 	}
 
 	bool canControl = state == Person::Standing || state == Person::Walking;
-	bool movementAllowed = engine.match.shouldAllowFreeMovement();
-	uint8_t teamDifficulty = team != REFEREE_TEAM && getTeam()->controllerType == Team::ComputerPlayer ? engine.settings.difficulty : 1;
 
 	if (canControl)
 	{
-		uint8_t input = 0;
-
-		if (isSelectedPlayer())
-		{
-			if (getTeam()->controllerType == Team::LocalPlayer)
-			{
-				input = Platform.readInput(LOCAL_PLAYER);
-			}
-			else if (getTeam()->controllerType == Team::RemotePlayer)
-			{
-				input = Platform.readInput(REMOTE_PLAYER);
-			}
-
-			if (!hasBall())
-			{
-				bool swapBecauseOffScreen = false;
-
-				if (!isOnScreen(8))
-				{
-					// Check if any other players on the team are on screen instead
-					for (int n = 0; n < NUM_PEOPLE; n++)
-					{
-						Person& other = engine.people[n];
-						if (&other != this && other.team == team && other.isOnScreen() && !other.isGoalie())
-						{
-							swapBecauseOffScreen = true;
-							break;
-						}
-					}
-				}
-
-				if (swapBecauseOffScreen || (input & Input_Btn_A))
-				{
-					// Swap selected player if pressing A or off screen
-					getTeam()->cycleSelectedPlayer();
-				}
-			}
-		}
-
 		uint8_t inputDirection = pgm_read_byte(&inputToDirection[input & 0xf]);
 
 		// Referee AI - follow ball around
@@ -362,23 +352,6 @@ void Person::update()
 			{
 				if (getTeam() == engine.match.electedTeam && engine.match.electedKicker)
 				{
-					/*int8_t offsetX, offsetY;
-					getDirectionOffset(index & 7, offsetX, offsetY);
-					int celebrationX = PITCH_RIGHT;
-					int celebrationY = getTeam()->isTopHalf() ? PITCH_TOP : PITCH_BOTTOM;
-					celebrationX += offsetX * 16;
-					celebrationY += offsetY * 16;
-
-					if (engine.match.electedKicker != this)
-					{
-						celebrationX = (celebrationX + engine.match.electedKicker->x) >> 1;
-						celebrationY = (celebrationY + engine.match.electedKicker->y) >> 1;
-					}
-
-					inputDirection = calculateFacingDirection(x, y, celebrationX, celebrationY);
-
-					*/
-
 					movementAllowed = true;
 
 					if (engine.match.electedKicker == this)
@@ -394,8 +367,15 @@ void Person::update()
 					}
 					else
 					{
-						inputDirection = calculateFacingDirection(x, y, engine.match.electedKicker->x, engine.match.electedKicker->y);
-						inputDirection = getAvoidDirection(inputDirection);
+						if ((engine.frameCount & 3) == (index & 3))	// Only change direction every 4 frames to avoid flip flop behaviour
+						{
+							inputDirection = calculateFacingDirection(x, y, engine.match.electedKicker->x, engine.match.electedKicker->y);
+							inputDirection = getAvoidDirection(inputDirection);
+						}
+						else
+						{
+							inputDirection = direction;
+						}
 
 						if (estimateDistance(x, y, engine.match.electedKicker->x, engine.match.electedKicker->y) < 32)
 						{
@@ -412,18 +392,45 @@ void Person::update()
 			{
 				if (!isSelectedPlayer() && ENABLE_AI_PLAYER)
 				{
+					bool shouldChangeDirection = (engine.frameCount & 7) == 0;		// Only change direction every few frames to avoid flip flop behaviour
+
 					// Follow formation
 					{
 						int16_t targetX, targetY;
 						getTeam()->calculateFormationPosition(index, targetX, targetY);
 						int formationLooseness = 16;
 
-						if (isGoalie() || estimateDistance(x, y, targetX, targetY) > formationLooseness)
+						if (isGoalie())
 						{
-							inputDirection = calculateFacingDirection(x, y, targetX, targetY);
+							if (hasBall())
+							{
+								inputDirection = NoDirection;
+								direction = getTeam()->isTopHalf() ? South : North;
+							}
+							else
+							{
+								inputDirection = calculateFacingDirection(x, y, targetX, targetY);
+								if (inputDirection == NoDirection)
+								{
+									direction = calculateFacingDirection(x, y, engine.ball.x, engine.ball.y);
+								}
+							}
 						}
-						//int16_t targetX = pgm_read_word(&startingPositions[index * 2]);
-						//int16_t targetY = pgm_read_word(&startingPositions[index * 2 + 1]);
+						else
+						{
+							if (estimateDistance(x, y, targetX, targetY) > formationLooseness)
+							{
+								if (shouldChangeDirection)
+								{
+									inputDirection = calculateFacingDirection(x, y, targetX, targetY);
+									inputDirection = getAvoidDirection(inputDirection);
+								}
+								else
+								{
+									inputDirection = direction;
+								}
+							}
+						}
 					}
 
 					if (hasBall())
@@ -435,7 +442,7 @@ void Person::update()
 								uint8_t targetDirection = getTeam()->isTopHalf() ? South : North;
 								if (direction == targetDirection && engine.ball.ownerTimer > 32)
 								{
-									input |= Input_Btn_A;
+									inputDown |= Input_Btn_A;
 								}
 
 								if (direction != targetDirection)
@@ -452,28 +459,35 @@ void Person::update()
 								inputDirection = calculateFacingDirection(x, y, goalX, goalY);
 
 								// Try shoot
-								if (estimateDistance(x, y, goalX, goalY) < 48)
+								if (estimateDistance(x, y, goalX, goalY) < 48 && direction == inputDirection)
 								{
-									input |= Input_Btn_B;
+									inputDown |= Input_Btn_B;
 								}
 								else
 								{
-									// Run down a wing
-									if (x > BACKGROUND_WIDTH / 4 && x < 3 * BACKGROUND_WIDTH / 4 && y > BACKGROUND_HEIGHT / 4 && y < 3 * BACKGROUND_HEIGHT / 4)
+									if (shouldChangeDirection)
 									{
-										if (index & 1)
-											inputDirection ++;
-										else
-											inputDirection --;
-										inputDirection &= 7;
-									}
+										// Run down a wing
+										if (x > BACKGROUND_WIDTH / 4 && x < 3 * BACKGROUND_WIDTH / 4 && y > BACKGROUND_HEIGHT / 4 && y < 3 * BACKGROUND_HEIGHT / 4)
+										{
+											if (index & 1)
+												inputDirection++;
+											else
+												inputDirection--;
+											inputDirection &= 7;
+										}
 
-									inputDirection = getAvoidDirection(inputDirection);
+										inputDirection = getAvoidDirection(inputDirection);
+									}
+									else
+									{
+										inputDirection = direction;
+									}
 
 									// Pass the ball if we have had it too long
 									if (engine.ball.ownerTimer > 60)
 									{
-										input |= Input_Btn_A;
+										inputDown |= Input_Btn_A;
 									}
 								}
 							}
@@ -482,7 +496,7 @@ void Person::update()
 						{
 							if (engine.ball.ownerTimer > 60)
 							{
-								input |= Input_Btn_A;
+								inputDown |= Input_Btn_A;
 							}
 						}
 					}
@@ -524,7 +538,14 @@ void Person::update()
 
 							if (shouldChaseBall)
 							{
-								inputDirection = calculateFacingDirection(x, y, engine.ball.x, engine.ball.y);
+								if (shouldChangeDirection)
+								{
+									inputDirection = calculateFacingDirection(x, y, engine.ball.x, engine.ball.y);
+								}
+								else
+								{
+									inputDirection = direction;
+								}
 
 								if (otherTeamHasBall)
 								{
@@ -534,7 +555,7 @@ void Person::update()
 									if (estimatedBallDistance < 10 && (autoSlideTackle || isGoalie()))
 									{
 										// Slide tackle opponent
-										input |= Input_Btn_B;
+										inputDown |= Input_Btn_B;
 									}
 								}
 							}
@@ -599,7 +620,7 @@ void Person::update()
 
 		if (engine.match.shouldAllowKicking())
 		{
-			if (input & Input_Btn_A)
+			if (inputDown & Input_Btn_A)
 			{
 				if (hasBall())
 				{
@@ -609,7 +630,7 @@ void Person::update()
 					return;
 				}
 			}
-			if (input & Input_Btn_B)
+			if (inputDown & Input_Btn_B)
 			{
 				if (hasBall())
 				{
@@ -627,6 +648,19 @@ void Person::update()
 				}
 			}
 		}
+	}
+
+	if (state == Person::Stunned || state == Person::Fallen)
+	{
+		if (animationFrame == 0)
+		{
+			if (!isColliding())
+			{
+				state = Person::Standing;
+			}
+		}
+		else animationFrame--;
+		return;
 	}
 
 	switch (state)
@@ -1132,13 +1166,21 @@ void Person::tryPass(uint8_t passDirection)
 	int16_t dirY = target->y - y;
 	int16_t magnitude = estimateMagnitude(dirX, dirY);
 
-	const int MASS_PASS_MAGNITUDE = 128;
+	const int MIN_PASS_MAGNITUDE = 32;
+	const int MAX_PASS_MAGNITUDE = 128;
 
-	while (magnitude > MASS_PASS_MAGNITUDE)
+	while (magnitude > MAX_PASS_MAGNITUDE)
 	{
 		magnitude >>= 1;
 		dirX /= 2;
 		dirY /= 2;
+	}
+
+	while (magnitude && magnitude < MIN_PASS_MAGNITUDE)
+	{
+		magnitude <<= 1;
+		dirX *= 2;
+		dirY *= 2;
 	}
 	
 	int16_t dirZ = magnitude >> 1;

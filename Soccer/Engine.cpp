@@ -99,6 +99,7 @@ void Engine::startMultiplayer(bool isHost)
 	teams[BLACK_TEAM].init(people + PLAYERS_PER_TEAM, isHost ? Team::RemotePlayer : Team::LocalPlayer);
 	match.reset();
 	gameState = GameState_Playing;
+	frameCount = 0;
 }
 
 void Engine::startSinglePlayer()
