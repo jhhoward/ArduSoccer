@@ -28,8 +28,9 @@
   ],
   "binaries": [
     {
+	  "cartimage" : "banner-small.png",
       "title": "ArduSoccer",
-      "filename": "AruSoccer.hex",
+      "filename": "ArduSoccer.hex",
       "device": "Arduboy"
     }
   ],
